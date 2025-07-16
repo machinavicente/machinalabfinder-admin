@@ -4,8 +4,8 @@
       <!-- Logo UNEFA -->
       <div class="text-center mb-4">
         <img src="public/assets/images/logo.png" alt="UNEFA Logo" class="login-logo" />
-        <h3 class="mt-3 text-unefa">Coordinación de Ingeniería de Sistemas</h3>
-        <p class="text-muted">Extensión Zaraza</p>
+        <h3 class="mt-3 text-unefa">Panel Administrativo</h3>
+        <p class="text-muted">MachinaLab Finder</p>
       </div>
 
       <!-- Formulario de inicio de sesión -->
