@@ -30,7 +30,7 @@
                 <span class="badge bg-secondary">{{ sim.asignatura }}</span>
               </td>
               <td>
-                <span class="badge bg-info text-dark">{{ sim.categoria }}</span>
+                <span class="badge  text-dark">{{ sim.categoria }}</span>
               </td>
               <td>{{ formatDate(sim.created_at) }}</td>
               <td>

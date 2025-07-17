@@ -1,16 +1,18 @@
 <template>
   <div class="admin-dashboard">
-    <AdminSidebar @logout="cerrarSesion" />
+    <AdminSidebar @logout="handleLogout" />
     
     <div class="admin-content">
-      <!-- Resumen estadístico -->
-      <div class="stats-row">
+      <!-- Resumen estadístico mejorado -->
+      <div class="stats-grid">
         <div class="stat-card">
           <StatsCard 
-            :value="usuariosActivos" 
-            label="Usuarios Activos" 
-            icon="bi-person-check" 
-            color="success" 
+            :value="totalUsuarios" 
+            label="Usuarios Totales" 
+            icon="bi-people-fill" 
+            color="primary"
+            trend="up"
+            trend-value="12%"
           />
         </div>
         <div class="stat-card">
@@ -18,7 +20,9 @@
             :value="usuariosRecientes" 
             label="Nuevos (7 días)" 
             icon="bi-person-plus" 
-            color="info" 
+            color="info"
+            trend="down"
+            trend-value="3%"
           />
         </div>
       </div>
@@ -195,7 +199,7 @@ import StatsCard from '@/components/admin/StatsCard.vue'
 import UsuarioFormModal from '@/components/admin/UsuarioFormModal.vue'
 import DeleteConfirmationModal from '@/components/admin/DeleteConfirmationModal.vue'
 import BulkDeleteModal from '@/components/admin/BulkDeleteModal.vue'
-
+const { isAuthenticated, logout } = useAuth()
 const router = useRouter()
 const { $supabase } = useNuxtApp()
 const supabase = $supabase as SupabaseClient
@@ -205,6 +209,7 @@ const usuarios = ref<any[]>([])
 const totalUsuarios = ref(0)
 const usuariosActivos = ref(0)
 const usuariosRecientes = ref(0)
+const usuariosInactivos = ref(0)
 const usuariosSeleccionados = ref<number[]>([])
 
 // Filtros y paginación
@@ -246,6 +251,14 @@ async function cargarUsuarios() {
       .gt('creado_en', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
     
     usuariosRecientes.value = recientes || 0
+
+    // Obtener usuarios inactivos (más de 30 días sin actividad)
+    const { count: inactivos } = await supabase
+      .from('usuarios')
+      .select('*', { count: 'exact', head: true })
+      .lt('ultimo_acceso', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+    
+    usuariosInactivos.value = inactivos || 0
 
     // Obtener lista completa de usuarios
     const { data, error } = await supabase
@@ -458,31 +471,36 @@ function formatFecha(fecha: string) {
   })
 }
 
-function cerrarSesion() {
-  localStorage.removeItem("usuario");
-  router.replace("/");
-  setTimeout(() => window.location.reload(), 100);
+onMounted(() => {
+  if (!isAuthenticated()) {
+    navigateTo('/')
+  }
+})
+
+const handleLogout = () => {
+  logout()
 }
 
 // Carga inicial
 onMounted(() => {
   cargarUsuarios()
 })
-</script>>
+</script>
 
 <style scoped>
 .admin-dashboard {
   display: flex;
   min-height: 100vh;
   padding: 0;
+  background-color: #f5f7fa;
 }
 
 .admin-content {
   margin-left: 250px;
   flex: 1;
   padding: 1.5rem;
-  background-color: #f5f7fa;
   transition: margin-left 0.3s ease;
+  overflow-x: hidden;
 }
 
 .bg-unefa-primary {
@@ -493,139 +511,206 @@ onMounted(() => {
   background-color: #007a3d;
   color: white;
   border: none;
+  transition: all 0.3s ease;
 }
 
 .btn-unefa-primary:hover {
   background-color: #006633;
   color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-.table th {
-  background-color: #f8f9fa;
-  border-top: 1px solid #dee2e6;
+.card {
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  border: none;
+  margin-bottom: 1.5rem;
 }
 
-/* Estilos para la paginación */
-.pagination .page-item.active .page-link {
-  background-color: #007a3d;
-  border-color: #007a3d;
+.card-header {
+  border-radius: 10px 10px 0 0 !important;
+  padding: 1rem 1.5rem;
 }
 
-.pagination .page-link {
-  color: #007a3d;
+.card-header h5 {
+  color: #FFC72C;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
 }
 
-.pagination .page-item.active .page-link {
-  color: white;
-}
-
-/* Estilos responsive */
-.stats-row {
+/* Estilos mejorados para el grid de estadísticas */
+.stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
   margin-bottom: 1.5rem;
 }
 
 .stat-card {
-  min-width: 0;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
+
+/* Estilos para acciones rápidas - Versión mejorada */
 .quick-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
 }
 
-.filter-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem;
-}
-
-.filter-item {
-  min-width: 0;
-}
-
-.action-buttons {
+.quick-actions .btn {
+  flex: 1 1 auto;
+  min-width: 180px;
   display: flex;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1rem;
+  white-space: nowrap;
+  transition: all 0.3s ease;
 }
 
-/* Estilos para la tabla en dispositivos pequeños */
+.quick-actions .btn i {
+  margin-right: 8px;
+}
+
+/* Estilos para la tabla responsive */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Media queries para responsive design - Versión mejorada */
+@media (max-width: 1199.98px) {
+  .admin-content {
+    padding: 1.25rem;
+  }
+  
+  .stats-grid {
+    gap: 1.25rem;
+  }
+  
+  .quick-actions .btn {
+    min-width: 160px;
+    padding: 0.65rem 0.9rem;
+    font-size: 0.95rem;
+  }
+}
+
 @media (max-width: 991.98px) {
   .admin-content {
     margin-left: 0;
     padding: 1rem;
   }
   
-  .table {
-    display: block;
-    overflow-x: auto;
-    white-space: nowrap;
-  }
-  
-  .select-col {
-    width: 40px;
-  }
-  
-  .name-col {
-    min-width: 150px;
-  }
-  
-  .email-col {
-    min-width: 200px;
-  }
-  
-  .alt-email-col {
-    min-width: 180px;
-  }
-  
-  .date-col {
-    min-width: 120px;
-  }
-  
-  .actions-col {
-    min-width: 100px;
-  }
-}
-
-@media (max-width: 767.98px) {
-  .quick-actions {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .quick-actions .btn {
-    width: 100%;
-  }
-  
-  .action-buttons {
-    justify-content: center;
-  }
-  
-  .stats-row {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 575.98px) {
-  .admin-content {
-    padding: 0.75rem;
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
   
   .card-header h5 {
     font-size: 1.1rem;
   }
   
-  .pagination {
-    flex-wrap: wrap;
+  .quick-actions {
+    gap: 0.5rem;
   }
   
-  .page-item {
-    margin-bottom: 0.5rem;
+  .quick-actions .btn {
+    min-width: 140px;
+    font-size: 0.9rem;
   }
+}
+
+@media (max-width: 767.98px) {
+  .admin-content {
+    padding: 0.75rem;
+  }
+  
+  .stats-grid {
+    gap: 1rem;
+  }
+  
+  .card-header {
+    padding: 0.85rem 1.25rem;
+  }
+  
+  .quick-actions {
+    flex-direction: column;
+  }
+  
+  .quick-actions .btn {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .admin-content {
+    padding: 0.5rem;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .card-header {
+    padding: 0.75rem 1rem;
+  }
+  
+  .card-header h5 {
+    font-size: 1rem;
+  }
+  
+  .card-header h5 i {
+    margin-right: 0.5rem;
+  }
+  
+  .quick-actions .btn {
+    padding: 0.6rem;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .admin-content {
+    padding: 0.5rem 0.25rem;
+  }
+  
+  .card-header h5 {
+    font-size: 0.95rem;
+  }
+  
+  .card-header h5 i {
+    margin-right: 0.4rem;
+    font-size: 0.9em;
+  }
+}
+
+/* Estilos específicos para columnas de la tabla */
+.select-col {
+  width: 40px;
+  text-align: center;
+}
+
+.name-col {
+  min-width: 150px;
+}
+
+.email-col, .alt-email-col {
+  min-width: 180px;
+}
+
+.date-col {
+  min-width: 120px;
+}
+
+.actions-col {
+  width: 120px;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: flex-end;
 }
 </style>

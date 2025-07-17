@@ -1,6 +1,6 @@
 <template>
   <div class="admin-dashboard">
-    <AdminSidebar @logout="cerrarSesion" />
+    <AdminSidebar @logout="handleLogout" />
     
     <div class="admin-content">
       <!-- Resumen estadístico -->
@@ -101,7 +101,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { forbiddenKeywords } from '@/utils/validate_form.js'
+
 
 // Componentes
 import AdminSidebar from '@/components/admin/AdminSidebar.vue'
@@ -109,7 +109,7 @@ import StatsCard from '@/components/admin/StatsCard.vue'
 import SimuladoresTable from '@/components/admin/SimuladoresTable.vue'
 import SimuladorFormModal from '@/components/admin/SimuladorFormModal.vue'
 import DeleteConfirmationModal from '@/components/admin/DeleteConfirmationModal.vue'
-
+const { isAuthenticated, logout } = useAuth()
 const router = useRouter()
 const { $supabase } = useNuxtApp()
 const supabase = $supabase as SupabaseClient
@@ -202,10 +202,7 @@ function cerrarModales() {
 
 // Operaciones CRUD
 async function guardarSimulador(formData: any) {
-  if (contieneContenidoInapropiado(formData.enlace)) {
-    alert('Este enlace contiene contenido no apto para un entorno educativo.')
-    return
-  }
+  
 
   try {
     if (modoEdicion.value && simuladorSeleccionado.value) {
@@ -312,18 +309,17 @@ async function exportarDatos() {
     console.error('Error al exportar datos:', error)
     alert('Ocurrió un error al intentar exportar los datos.')
   }
-}
+} 
 
-// Utilidades
-function contieneContenidoInapropiado(url: string): boolean {
-  const lowerUrl = url.toLowerCase()
-  return forbiddenKeywords.some(keyword => lowerUrl.includes(keyword.toLowerCase()))
-}
 
-function cerrarSesion() {
-  localStorage.removeItem("usuario");
-  router.replace("/");
-  setTimeout(() => window.location.reload(), 100);
+onMounted(() => {
+  if (!isAuthenticated()) {
+    navigateTo('/')
+  }
+})
+
+const handleLogout = () => {
+  logout()
 }
 // Carga inicial
 onMounted(() => {

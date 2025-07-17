@@ -3,7 +3,7 @@
     <div class="login-card">
       <!-- Logo UNEFA -->
       <div class="text-center mb-4">
-        <img src="public/assets/images/logo.png" alt="UNEFA Logo" class="login-logo" />
+        <img src="public/assets/images/logo.png" alt="UNEFA Logo" height="120px" class="login-logo" />
         <h3 class="mt-3 text-unefa">Panel Administrativo</h3>
         <p class="text-muted">MachinaLab Finder</p>
       </div>
@@ -22,7 +22,6 @@
             <i class="bi bi-person-fill me-2"></i>Usuario
           </label>
           <div class="input-group">
-            
             <input
               v-model="username"
               type="text"
@@ -35,7 +34,7 @@
           </div>
         </div>
 
-        <!-- Campo de contraseña -->
+        <!-- Campo de contraseña con toggle -->
         <div class="mb-4">
           <label for="password" class="form-label">
             <i class="bi bi-lock-fill me-2"></i>Contraseña
@@ -43,7 +42,7 @@
           <div class="input-group">
             <input
               v-model="password"
-              type="password"
+              :type="showPassword ? 'text' : 'password'"
               class="form-control"
               id="password"
               placeholder="*********"
@@ -54,6 +53,7 @@
               class="btn btn-outline-secondary"
               type="button"
               @click="togglePasswordVisibility"
+              :aria-label="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
             >
               <i :class="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
             </button>
@@ -70,44 +70,32 @@
             <i class="bi bi-box-arrow-in-right me-2"></i>Iniciar Sesión
           </span>
         </button>
-
       </form>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-// Estado del formulario
 const username = ref('')
 const password = ref('')
-const showPassword = ref(false)
-const loading = ref(false)
 const errorMessage = ref('')
-const showHelpModal = ref(false)
+const loading = ref(false)
+const showPassword = ref(false)
 
-// Función para alternar visibilidad de contraseña
+const { login } = useAuth()
+
 const togglePasswordVisibility = () => {
   showPassword.value = !showPassword.value
-  const passwordInput = document.getElementById('password') as HTMLInputElement
-  if (passwordInput) {
-    passwordInput.type = showPassword.value ? 'text' : 'password'
-  }
+  // Enfocar de nuevo el input de contraseña para mejor UX
+  nextTick(() => {
+    const passwordInput = document.getElementById('password')
+    if (passwordInput) passwordInput.focus()
+  })
 }
 
-// Función para manejar el inicio de sesión
 const handleLogin = async () => {
-  // Validación básica
   if (!username.value || !password.value) {
     errorMessage.value = 'Por favor complete todos los campos'
-    return
-  }
-
-  // Validar credenciales exactas
-  const defaultUsername = 'unefa-ext-zaraza'
-  const defaultPassword = 'unefa-zaraza'
-
-  if (username.value !== defaultUsername || password.value !== defaultPassword) {
-    errorMessage.value = 'Usuario o contraseña incorrectos. Intente nuevamente.'
     return
   }
 
@@ -115,21 +103,18 @@ const handleLogin = async () => {
   errorMessage.value = ''
 
   try {
-    // Simulación de autenticación
-    await new Promise(resolve => setTimeout(resolve, 1500))
-
-    // Redirigir al dashboard
-    navigateTo('/dashboard')
-  } catch (error) {
-    errorMessage.value = 'Error al conectar con el servidor. Intente más tarde.'
-    console.error('Login error:', error)
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
+    if (login(username.value, password.value)) {
+      return navigateTo('/dashboard')
+    } else {
+      errorMessage.value = 'Credenciales incorrectas'
+    }
   } finally {
     loading.value = false
   }
 }
-
 </script>
-
 
 <style scoped>
 .login-container {
@@ -153,13 +138,12 @@ const handleLogin = async () => {
 }
 
 .login-logo {
-  height: 80px;
-  margin-bottom: 1rem;
+  margin-bottom: .5rem;
 }
 
 .text-unefa {
   color: #007a3d;
-  font-weight: 600;
+  font-weight: 800;
 }
 
 .btn-unefa {
@@ -175,38 +159,28 @@ const handleLogin = async () => {
   color: white;
 }
 
-.bg-unefa {
-  background-color: #007a3d !important;
-}
-
 .login-form {
   margin-top: 1.5rem;
 }
 
-.input-group-text {
-  font-size: 0.9rem;
+/* Estilo mejorado para el botón de mostrar contraseña */
+.btn-outline-secondary {
+  border-color: #ced4da;
+  transition: all 0.2s;
 }
 
-.modal-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1050;
+.btn-outline-secondary:hover {
+  background-color: #f8f9fa;
 }
 
-.modal-content {
+/* Ajuste para el input de contraseña */
+.input-group .form-control {
+  border-right: none;
+}
+
+.input-group .btn-outline-secondary {
+  border-left: none;
   background-color: white;
-  border-radius: 8px;
-  width: 100%;
-  max-width: 500px;
-  overflow: hidden;
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
 }
 
 @media (max-width: 576px) {
