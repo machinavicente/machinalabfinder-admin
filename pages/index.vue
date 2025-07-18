@@ -108,7 +108,7 @@ const handleLogin = async () => {
     await new Promise(resolve => setTimeout(resolve, 1000))
     
     if (login(username.value, password.value)) {
-      return navigateTo('/dashboard')
+      return navigateTo('/panel')
     } else {
       errorMessage.value = 'Credenciales incorrectas'
     }

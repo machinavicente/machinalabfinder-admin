@@ -30,7 +30,7 @@ const router = useRouter()
 async function logout() {
   const { $supabase } = useNuxtApp()
   await $supabase?.auth.signOut?.()
-  router.push('/login')
+  router.push('/')
 }
 </script>
 
