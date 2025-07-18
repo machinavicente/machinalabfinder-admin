@@ -1,20 +1,22 @@
 <template>
   <div class="card">
-    <div class="card-header bg-unefa-primary text-white d-flex justify-content-between align-items-center">
+    <div
+      class="card-header bg-unefa-primary text-white d-flex justify-content-between align-items-center"
+    >
       <h5 class="mb-0">
         <i class="bi bi-list-check me-2"></i>Listado de Simuladores
       </h5>
       <div class="d-flex gap-2">
         <div class="input-group input-group-sm">
-          <input 
-            v-model="terminoBusqueda" 
-            type="text" 
-            class="form-control" 
-            placeholder="Buscar por nombre, asignatura, categoría..." 
+          <input
+            v-model="terminoBusqueda"
+            type="text"
+            class="form-control"
+            placeholder="Buscar por nombre, asignatura, categoría..."
           />
-          <button 
-            v-if="terminoBusqueda" 
-            class="btn btn-outline-light" 
+          <button
+            v-if="terminoBusqueda"
+            class="btn btn-outline-light"
             @click="terminoBusqueda = ''"
           >
             <i class="bi bi-x"></i>
@@ -49,13 +51,23 @@
               <td>{{ formatDate(sim.created_at) }}</td>
               <td>
                 <div class="d-flex gap-2">
-                  <button class="btn btn-sm btn-outline-primary" @click="$emit('edit', sim)">
+                  <button
+                    class="btn btn-sm btn-outline-primary"
+                    @click="$emit('edit', sim)"
+                  >
                     <i class="bi bi-pencil"></i>
                   </button>
-                  <button class="btn btn-sm btn-outline-danger" @click="$emit('delete', sim)">
+                  <button
+                    class="btn btn-sm btn-outline-danger"
+                    @click="$emit('delete', sim)"
+                  >
                     <i class="bi bi-trash"></i>
                   </button>
-                  <a :href="sim.enlace" target="_blank" class="btn btn-sm btn-outline-success">
+                  <a
+                    :href="sim.enlace"
+                    target="_blank"
+                    class="btn btn-sm btn-outline-success"
+                  >
                     <i class="bi bi-play"></i>
                   </a>
                 </div>
@@ -69,10 +81,18 @@
           <li class="page-item" :class="{ disabled: paginaActual === 1 }">
             <button class="page-link" @click="paginaActual--">&laquo;</button>
           </li>
-          <li v-for="n in totalPaginas" :key="n" class="page-item" :class="{ active: n === paginaActual }">
+          <li
+            v-for="n in totalPaginas"
+            :key="n"
+            class="page-item"
+            :class="{ active: n === paginaActual }"
+          >
             <button class="page-link" @click="paginaActual = n">{{ n }}</button>
           </li>
-          <li class="page-item" :class="{ disabled: paginaActual === totalPaginas }">
+          <li
+            class="page-item"
+            :class="{ disabled: paginaActual === totalPaginas }"
+          >
             <button class="page-link" @click="paginaActual++">&raquo;</button>
           </li>
         </ul>
@@ -82,56 +102,61 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed } from "vue";
 
 const props = defineProps({
   simuladores: {
     type: Array as () => Array<{
-      id: number
-      nombre_del_simulador: string
-      enlace: string
-      categoria: string
-      asignatura: string
-      descripcion_del_simulador: string
-      created_at: string
+      id: number;
+      nombre_del_simulador: string;
+      enlace: string;
+      categoria: string;
+      asignatura: string;
+      descripcion_del_simulador: string;
+      created_at: string;
     }>,
-    required: true
-  }
-})
+    required: true,
+  },
+});
 
-defineEmits(['refresh', 'edit', 'delete'])
+defineEmits(["refresh", "edit", "delete"]);
 
-const terminoBusqueda = ref('')
-const paginaActual = ref(1)
-const itemsPorPagina = 10
+const terminoBusqueda = ref("");
+const paginaActual = ref(1);
+const itemsPorPagina = 10;
 
 const simuladoresFiltrados = computed(() => {
-  if (!terminoBusqueda.value) return props.simuladores
-  
-  const termino = terminoBusqueda.value.toLowerCase()
-  
-  return props.simuladores.filter(sim => {
+  if (!terminoBusqueda.value) return props.simuladores;
+
+  const termino = terminoBusqueda.value.toLowerCase();
+
+  return props.simuladores.filter((sim) => {
     return (
       sim.nombre_del_simulador.toLowerCase().includes(termino) ||
       (sim.asignatura && sim.asignatura.toLowerCase().includes(termino)) ||
       (sim.categoria && sim.categoria.toLowerCase().includes(termino)) ||
-      (sim.descripcion_del_simulador && sim.descripcion_del_simulador.toLowerCase().includes(termino))
-    )
-  })
-})
+      (sim.descripcion_del_simulador &&
+        sim.descripcion_del_simulador.toLowerCase().includes(termino))
+    );
+  });
+});
 
 const simuladoresPaginados = computed(() => {
-  const start = (paginaActual.value - 1) * itemsPorPagina
-  return simuladoresFiltrados.value.slice(start, start + itemsPorPagina)
-})
+  const start = (paginaActual.value - 1) * itemsPorPagina;
+  return simuladoresFiltrados.value.slice(start, start + itemsPorPagina);
+});
 
-const totalPaginas = computed(() => 
+const totalPaginas = computed(() =>
   Math.ceil(simuladoresFiltrados.value.length / itemsPorPagina)
-)
+);
 
 function formatDate(fechaISO: string) {
-  const date = new Date(fechaISO)
-  return date.toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' })
+  const date = new Date(fechaISO);
+  return date.toLocaleDateString("es-ES", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
 </script>
 
@@ -146,11 +171,34 @@ function formatDate(fechaISO: string) {
 }
 
 h5 {
-  color: #FFC72C;
+  color: #ffc72c;
 }
 
 .input-group {
-  width: 50px;
+  width: 250px;
+}
+@media (max-width: 991.98px) {
+  .input-group {
+    width: 200px;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .input-group {
+    width: 180px;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .input-group {
+    width: 90px;
+  }
+}
+
+@media (max-width: 400px) {
+  .input-group {
+    width: 50px;
+  }
 }
 
 .badge.text-dark {
