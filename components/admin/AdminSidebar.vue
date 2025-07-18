@@ -9,7 +9,7 @@
     <ul class="nav flex-column">
       <li class="nav-item">
         <NuxtLink to="/panel" class="nav-link">
-          <i class="bi bi-cpu"></i> Panel
+          <i class="ri-line-chart-linebi bi-cpu"></i> Panel
         </NuxtLink >
       </li>
       <li class="nav-item">

@@ -2,11 +2,11 @@
   <ClientOnly>
     <nav class="bottom-nav">
       <NuxtLink to="/panel" class="nav-item" active-class="active">
-        <i class="bi bi-grid"></i>
+        <i class="ri-line-chart-line"></i>
         <span>Panel</span>
       </NuxtLink>
       <NuxtLink to="/dashboard" class="nav-item" active-class="active">
-        <i class="bi bi-grid"></i>
+        <i class="bi bi-cpu"></i>
         <span>Simuladores</span>
       </NuxtLink>
 
