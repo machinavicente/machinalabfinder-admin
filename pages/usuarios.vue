@@ -3,6 +3,7 @@
     <AdminSidebar @logout="handleLogout" />
     
     <div class="admin-content">
+      <h2 class="mb-4 text-unefa-primary">Panel de Usuarios</h2>
       <!-- Resumen estadístico mejorado -->
       <div class="stats-grid">
         <div class="stat-card">
@@ -167,23 +168,101 @@
         :usuario="usuarioSeleccionado"
         @close="cerrarModales"
         @submit="guardarUsuario"
+        @refresh="cargarUsuarios"
       />
 
-      <DeleteConfirmationModal 
-        :visible="modalEliminarVisible"
-        :itemNombre="usuarioSeleccionado ? `${usuarioSeleccionado.nombre} ${usuarioSeleccionado.apellido}` : ''"
-        itemType="usuario"
-        @close="cerrarModales"
-        @confirm="confirmarEliminar"
-      />
+      <!-- Modal de confirmación para eliminar usuario -->
+      <div class="modal fade show" tabindex="-1" role="dialog" style="display: block;" v-if="modalEliminarVisible">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+          <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+              <h5 class="modal-title">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                Confirmar Eliminación
+              </h5>
+              <button type="button" class="btn-close btn-close-white" @click="cerrarModales"></button>
+            </div>
+            <div class="modal-body">
+              <div class="text-center">
+                <i class="bi bi-exclamation-circle text-danger" style="font-size: 3rem;"></i>
+                <h4 class="mt-3">¿Estás seguro de eliminar este usuario?</h4>
+                <p class="mb-0">
+                  El usuario <strong>{{ usuarioSeleccionado?.nombre }} {{ usuarioSeleccionado?.apellido }}</strong> 
+                  será eliminado permanentemente.
+                </p>
+              </div>
+            </div>
+            <div class="modal-footer justify-content-center">
+              <button type="button" class="btn btn-outline-secondary" @click="cerrarModales">
+                Cancelar
+              </button>
+              <button type="button" class="btn btn-danger" @click="confirmarEliminar">
+                <i class="bi bi-trash me-2"></i>Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
 
-      <BulkDeleteModal 
-        :visible="modalEliminacionMasivaVisible"
-        :cantidad="usuariosSeleccionados.length"
-        itemType="usuarios"
-        @close="cerrarModales"
-        @confirm="confirmarEliminacionMasiva"
-      />
+      <!-- Modal de confirmación para eliminación  -->
+      <div class="modal fade show" tabindex="-1" role="dialog" style="display: block;" v-if="modalEliminacionMasivaVisible">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+          <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+              <h5 class="modal-title">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                Confirmar Eliminación
+              </h5>
+              <button type="button" class="btn-close btn-close-white" @click="cerrarModales"></button>
+            </div>
+            <div class="modal-body">
+              <div class="text-center">
+                <i class="bi bi-exclamation-circle text-danger" style="font-size: 3rem;"></i>
+                <h4 class="mt-3">¿Estás seguro de eliminar los usuarios seleccionados?</h4>
+                <p class="mb-0">
+                  Se eliminarán permanentemente <strong>{{ usuariosSeleccionados.length }}</strong> usuarios.
+                </p>
+              </div>
+            </div>
+            <div class="modal-footer justify-content-center">
+              <button type="button" class="btn btn-outline-secondary" @click="cerrarModales">
+                Cancelar
+              </button>
+              <button type="button" class="btn btn-danger" @click="confirmarEliminacionMasiva">
+                <i class="bi bi-trash me-2"></i>Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal de éxito después de eliminar -->
+      <div class="modal fade show" tabindex="-1" role="dialog" style="display: block;" v-if="showDeleteSuccessModal">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+          <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+              <h5 class="modal-title">
+                <i class="bi bi-check-circle-fill me-2"></i>
+                Eliminación Exitosa
+              </h5>
+              <button type="button" class="btn-close btn-close-white" @click="showDeleteSuccessModal = false"></button>
+            </div>
+            <div class="modal-body text-center">
+              <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
+              <h4 class="mt-3">¡Usuario(s) eliminado(s) con éxito!</h4>
+              <p>La operación se completó correctamente.</p>
+            </div>
+            <div class="modal-footer justify-content-center">
+              <button type="button" class="btn btn-success" @click="showDeleteSuccessModal = false">
+                Aceptar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Backdrop para todos los modales -->
+      <div class="modal-backdrop fade show" v-if="modalUsuarioVisible || modalEliminarVisible || modalEliminacionMasivaVisible || showDeleteSuccessModal"></div>
     </div>
   </div>
 </template>
@@ -197,8 +276,6 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import AdminSidebar from '@/components/admin/AdminSidebar.vue'
 import StatsCard from '@/components/admin/StatsCard.vue'
 import UsuarioFormModal from '@/components/admin/UsuarioFormModal.vue'
-import DeleteConfirmationModal from '@/components/admin/DeleteConfirmationModal.vue'
-import BulkDeleteModal from '@/components/admin/BulkDeleteModal.vue'
 const { isAuthenticated, logout } = useAuth()
 const router = useRouter()
 const { $supabase } = useNuxtApp()
@@ -223,6 +300,7 @@ const usuariosPorPagina = ref(10)
 const modalUsuarioVisible = ref(false)
 const modalEliminarVisible = ref(false)
 const modalEliminacionMasivaVisible = ref(false)
+const showDeleteSuccessModal = ref(false)
 const usuarioSeleccionado = ref<any>(null)
 const modoEdicion = ref(false)
 
@@ -384,7 +462,7 @@ async function guardarUsuario(formData: any) {
           apellido: formData.apellido,
           email: formData.email,
           emailAlternativo: formData.emailAlternativo,
-          password_hash: 'temp_password', // Se debe implementar lógica de hash
+          password_hash: 'unefa-user', // Se debe implementar lógica de hash
           salt: 'temp_salt' // Se debe implementar generación de salt
         }])
         .select()
@@ -413,6 +491,7 @@ async function confirmarEliminar() {
 
     await cargarUsuarios()
     cerrarModales()
+    showDeleteSuccessModal.value = true
   } catch (error) {
     console.error('Error al eliminar usuario:', error)
     alert('Error al eliminar el usuario')
@@ -431,6 +510,7 @@ async function confirmarEliminacionMasiva() {
     usuariosSeleccionados.value = []
     await cargarUsuarios()
     cerrarModales()
+    showDeleteSuccessModal.value = true
   } catch (error) {
     console.error('Error al eliminar usuarios:', error)
     alert('Error al eliminar los usuarios seleccionados')
@@ -517,7 +597,6 @@ onMounted(() => {
 .btn-unefa-primary:hover {
   background-color: #006633;
   color: white;
-  transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -551,7 +630,6 @@ onMounted(() => {
 .stat-card {
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
-
 
 /* Estilos para acciones rápidas - Versión mejorada */
 .quick-actions {
@@ -712,5 +790,25 @@ onMounted(() => {
 .action-buttons {
   display: flex;
   justify-content: flex-end;
+}
+
+/* Estilos para los modales */
+.modal-content {
+  border: none;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.modal-backdrop {
+  opacity: 0.5;
+}
+
+.modal-dialog-centered {
+  display: flex;
+  align-items: center;
+  min-height: calc(100% - 1rem);
 }
 </style>

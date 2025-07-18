@@ -1,15 +1,17 @@
 <template>
-  <div class="login-container">
-    <div class="login-card">
+  <div class="auth-container">
+    <div class="auth-card">
       <!-- Logo UNEFA -->
-      <div class="text-center mb-4">
-        <img src="public/assets/images/logo.png" alt="UNEFA Logo" height="120px" class="login-logo" />
-        <h3 class="mt-3 text-unefa">Panel Administrativo</h3>
+      <div class="auth-header text-center mb-4">
+        <img src="/assets/images/logo.png" alt="UNEFA Logo" class="auth-logo" />
+        <h3 class="mt-3 text-unefa">
+          <i class="bi bi-shield-lock me-2"></i>Panel Administrativo
+        </h3>
         <p class="text-muted">MachinaLab Finder</p>
       </div>
 
       <!-- Formulario de inicio de sesión -->
-      <form @submit.prevent="handleLogin" class="login-form">
+      <form @submit.prevent="handleLogin" class="auth-form">
         <!-- Mensaje de error -->
         <div v-if="errorMessage" class="alert alert-danger d-flex align-items-center">
           <i class="bi bi-exclamation-triangle-fill me-2"></i>
@@ -19,7 +21,7 @@
         <!-- Campo de usuario -->
         <div class="mb-3">
           <label for="username" class="form-label">
-            <i class="bi bi-person-fill me-2"></i>Usuario
+            <i class="bi bi-person-fill me-2 text-unefa"></i>Usuario
           </label>
           <div class="input-group">
             <input
@@ -37,7 +39,7 @@
         <!-- Campo de contraseña con toggle -->
         <div class="mb-4">
           <label for="password" class="form-label">
-            <i class="bi bi-lock-fill me-2"></i>Contraseña
+            <i class="bi bi-lock-fill me-2 text-unefa"></i>Contraseña
           </label>
           <div class="input-group">
             <input
@@ -45,7 +47,7 @@
               :type="showPassword ? 'text' : 'password'"
               class="form-control"
               id="password"
-              placeholder="*********"
+              placeholder="**********"
               required
               autocomplete="current-password"
             />
@@ -117,78 +119,77 @@ const handleLogin = async () => {
 </script>
 
 <style scoped>
-.login-container {
+
+.auth-container {
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
   background-color: #f8f9fa;
-  background-image: linear-gradient(to bottom, rgba(0, 122, 61, 0.1), rgba(255, 255, 255, 0.8));
   padding: 1rem;
 }
 
-.login-card {
+.auth-card {
   width: 100%;
   max-width: 450px;
   background: white;
-  border-radius: 10px;
+  border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   padding: 2rem;
-  border-top: 5px solid #007a3d;
+  border-top: 5px solid #003366;
 }
 
-.login-logo {
-  margin-bottom: .5rem;
+.auth-header {
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.auth-logo {
+  height: 80px;
+  margin-bottom: 1rem;
 }
 
 .text-unefa {
-  color: #007a3d;
-  font-weight: 800;
+  color: #003366;
+  font-weight: 600;
 }
 
-.btn-unefa {
-  background-color: #007a3d;
+.btn-unefa{
+  background-color: #003366;
   color: white;
-  font-weight: 500;
   border: none;
-  transition: background-color 0.3s;
+  transition: all 0.3s;
 }
 
 .btn-unefa:hover {
-  background-color: #006633;
-  color: white;
+  background-color: #002147;
+  color: #FFCC00;
 }
 
-.login-form {
-  margin-top: 1.5rem;
-}
-
-/* Estilo mejorado para el botón de mostrar contraseña */
 .btn-outline-secondary {
-  border-color: #ced4da;
-  transition: all 0.2s;
-}
-
-.btn-outline-secondary:hover {
-  background-color: #f8f9fa;
-}
-
-/* Ajuste para el input de contraseña */
-.input-group .form-control {
-  border-right: none;
-}
-
-.input-group .btn-outline-secondary {
+  padding: 10px;
+  border-radius: 0 8px 8px 0;
   border-left: none;
-  background-color: white;
 }
+
+.form-control {
+  border-radius: 8px;
+  padding: 10px 15px;
+  border: 1px solid #ced4da;
+  transition: border-color 0.3s;
+}
+
+.alert {
+  border-radius: 8px;
+}
+
 
 @media (max-width: 576px) {
-  .login-card {
+  .auth-card {
     padding: 1.5rem;
   }
   
-  .login-logo {
+  .auth-logo {
     height: 70px;
   }
 }

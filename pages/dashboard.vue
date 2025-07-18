@@ -3,6 +3,7 @@
     <AdminSidebar @logout="handleLogout" />
     
     <div class="admin-content">
+      <h2 class="mb-4 text-unefa-primary">Panel de Simuladores</h2>
       <!-- Resumen estadístico -->
       <div class="stats-grid">
         <div class="stat-item">
@@ -19,23 +20,6 @@
             label="Asignaturas" 
             icon="bi-book" 
             color="success" 
-          />
-        </div>
-        <div class="stat-item">
-          <StatsCard 
-            :value="totalCategorias" 
-            label="Categorías" 
-            icon="bi-tags" 
-            color="warning" 
-            textClass="text-dark" 
-          />
-        </div>
-        <div class="stat-item">
-          <StatsCard 
-            :value="totalUsuarios" 
-            label="Usuarios" 
-            icon="bi-people" 
-            color="info" 
           />
         </div>
       </div>
@@ -202,11 +186,9 @@ function cerrarModales() {
 
 // Operaciones CRUD
 async function guardarSimulador(formData: any) {
-  
-
   try {
     if (modoEdicion.value && simuladorSeleccionado.value) {
-      // Actualizar
+      // Actualización (no cambiamos la fecha)
       const { error } = await supabase
         .from('simuladores')
         .update({
@@ -220,7 +202,8 @@ async function guardarSimulador(formData: any) {
 
       if (error) throw error
     } else {
-      // Crear nuevo
+      // Creación (agregamos fecha actual)
+      const fechaActual = new Date().toISOString()
       const { data, error } = await supabase
         .from('simuladores')
         .insert([{
@@ -228,7 +211,8 @@ async function guardarSimulador(formData: any) {
           enlace: formData.enlace,
           categoria: formData.categoria,
           asignatura: formData.asignatura,
-          descripcion_del_simulador: formData.descripcion
+          descripcion_del_simulador: formData.descripcion,
+          created_at: fechaActual // <-- Aquí agregamos la fecha
         }])
         .select()
 

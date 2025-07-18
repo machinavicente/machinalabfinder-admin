@@ -1,6 +1,10 @@
 <template>
   <ClientOnly>
     <nav class="bottom-nav">
+      <NuxtLink to="/panel" class="nav-item" active-class="active">
+        <i class="bi bi-grid"></i>
+        <span>Panel</span>
+      </NuxtLink>
       <NuxtLink to="/dashboard" class="nav-item" active-class="active">
         <i class="bi bi-grid"></i>
         <span>Simuladores</span>

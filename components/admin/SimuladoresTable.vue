@@ -5,7 +5,21 @@
         <i class="bi bi-list-check me-2"></i>Listado de Simuladores
       </h5>
       <div class="d-flex gap-2">
-        <input v-model="terminoBusqueda" type="text" class="form-control form-control-sm" placeholder="Buscar..." />
+        <div class="input-group input-group-sm">
+          <input 
+            v-model="terminoBusqueda" 
+            type="text" 
+            class="form-control" 
+            placeholder="Buscar por nombre, asignatura, categoría..." 
+          />
+          <button 
+            v-if="terminoBusqueda" 
+            class="btn btn-outline-light" 
+            @click="terminoBusqueda = ''"
+          >
+            <i class="bi bi-x"></i>
+          </button>
+        </div>
         <button class="btn btn-sm btn-light" @click="$emit('refresh')">
           <i class="bi bi-arrow-clockwise"></i>
         </button>
@@ -30,7 +44,7 @@
                 <span class="badge bg-secondary">{{ sim.asignatura }}</span>
               </td>
               <td>
-                <span class="badge  text-dark">{{ sim.categoria }}</span>
+                <span class="badge text-dark">{{ sim.categoria }}</span>
               </td>
               <td>{{ formatDate(sim.created_at) }}</td>
               <td>
@@ -70,7 +84,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 
-
 const props = defineProps({
   simuladores: {
     type: Array as () => Array<{
@@ -93,13 +106,18 @@ const paginaActual = ref(1)
 const itemsPorPagina = 10
 
 const simuladoresFiltrados = computed(() => {
+  if (!terminoBusqueda.value) return props.simuladores
+  
   const termino = terminoBusqueda.value.toLowerCase()
-  return props.simuladores.filter(sim => 
-    sim.nombre_del_simulador.toLowerCase().includes(termino) ||
-    sim.asignatura.toLowerCase().includes(termino) ||
-    sim.categoria.toLowerCase().includes(termino) ||
-    sim.descripcion_del_simulador.toLowerCase().includes(termino)
-  )
+  
+  return props.simuladores.filter(sim => {
+    return (
+      sim.nombre_del_simulador.toLowerCase().includes(termino) ||
+      (sim.asignatura && sim.asignatura.toLowerCase().includes(termino)) ||
+      (sim.categoria && sim.categoria.toLowerCase().includes(termino)) ||
+      (sim.descripcion_del_simulador && sim.descripcion_del_simulador.toLowerCase().includes(termino))
+    )
+  })
 })
 
 const simuladoresPaginados = computed(() => {
@@ -126,7 +144,16 @@ function formatDate(fechaISO: string) {
   background-color: #f8f9fa;
   border-bottom-width: 1px;
 }
-h5{
+
+h5 {
   color: #FFC72C;
+}
+
+.input-group {
+  width: 50px;
+}
+
+.badge.text-dark {
+  background-color: #e9ecef;
 }
 </style>

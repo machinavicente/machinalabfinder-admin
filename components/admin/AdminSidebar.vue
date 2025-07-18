@@ -8,8 +8,13 @@
     </div>
     <ul class="nav flex-column">
       <li class="nav-item">
+        <NuxtLink to="/panel" class="nav-link">
+          <i class="bi bi-cpu"></i> Panel
+        </NuxtLink >
+      </li>
+      <li class="nav-item">
         <NuxtLink to="/dashboard" class="nav-link">
-          <i class="bi bi-grid"></i> Simuladores
+          <i class="bi bi-cpu"></i> Simuladores
         </NuxtLink >
       </li>
       <li class="nav-item">

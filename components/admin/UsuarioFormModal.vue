@@ -1,4 +1,5 @@
 <template>
+  <!-- Modal principal para crear/editar usuario -->
   <div class="modal fade show" tabindex="-1" role="dialog" style="display: block;" v-if="visible">
     <div class="modal-dialog modal-lg" role="document">
       <div class="modal-content">
@@ -53,28 +54,18 @@
                 id="emailAlternativo" 
                 v-model="form.emailAlternativo"
               >
-              <div class="form-text">Opcional</div>
             </div>
             
             <div class="row mb-3" v-if="!editMode">
               <div class="col-md-6">
                 <label for="password" class="form-label">Contraseña</label>
                 <input 
-                  type="password" 
+                  placeholder="unefa-user"
+                  type="text" 
                   class="form-control" 
                   id="password" 
                   v-model="form.password"
-                  required
-                >
-              </div>
-              <div class="col-md-6">
-                <label for="confirmPassword" class="form-label">Confirmar Contraseña</label>
-                <input 
-                  type="password" 
-                  class="form-control" 
-                  id="confirmPassword" 
-                  v-model="form.confirmPassword"
-                  required
+                  readonly
                 >
               </div>
             </div>
@@ -92,7 +83,36 @@
       </div>
     </div>
   </div>
-  <div class="modal-backdrop fade show" v-if="visible"></div>
+
+  <!-- Modal de confirmación -->
+  <div class="modal fade show" tabindex="-1" role="dialog" style="display: block;" v-if="showSuccessModal">
+    <div class="modal-dialog modal-md" role="document">
+      <div class="modal-content">
+        <div class="modal-header bg-success text-white">
+          <h5 class="modal-title">
+            <i class="bi bi-check-circle-fill"></i>
+            Operación Exitosa
+          </h5>
+          <button type="button" class="btn-close btn-close-white" @click="closeSuccessModal"></button>
+        </div>
+        <div class="modal-body text-center">
+          <div class="mb-3">
+            <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
+          </div>
+          <h4 class="mb-3">¡Usuario {{ editMode ? 'actualizado' : 'creado' }} con éxito!</h4>
+          <p>Los cambios se han guardado correctamente en el sistema.</p>
+        </div>
+        <div class="modal-footer justify-content-center">
+          <button type="button" class="btn btn-success" @click="closeSuccessModal">
+            Aceptar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Backdrop para ambos modales -->
+  <div class="modal-backdrop fade show" v-if="visible || showSuccessModal"></div>
 </template>
 
 <script setup lang="ts">
@@ -104,16 +124,17 @@ const props = defineProps({
   usuario: Object
 })
 
-const emit = defineEmits(['close', 'submit'])
+const emit = defineEmits(['close', 'submit', 'refresh'])
 
 const form = ref({
   nombre: '',
   apellido: '',
   email: '',
   emailAlternativo: '',
-  password: '',
-  confirmPassword: ''
+  password: 'unefa-user' // Valor por defecto para nuevo usuario
 })
+
+const showSuccessModal = ref(false)
 
 // Cuando cambia el usuario seleccionado (para edición)
 watch(() => props.usuario, (newVal) => {
@@ -123,31 +144,25 @@ watch(() => props.usuario, (newVal) => {
       apellido: newVal.apellido || '',
       email: newVal.email || '',
       emailAlternativo: newVal.emailAlternativo || '',
-      password: '',
-      confirmPassword: ''
+      password: '' // No mostrar contraseña en edición
     }
   } else {
     resetForm()
   }
 }, { immediate: true })
 
+// Limpiar completamente el formulario
 function resetForm() {
   form.value = {
     nombre: '',
     apellido: '',
     email: '',
     emailAlternativo: '',
-    password: '',
-    confirmPassword: ''
+    password: 'unefa-user' // Restablecer valor por defecto
   }
 }
 
 function submitForm() {
-  if (!props.editMode && form.value.password !== form.value.confirmPassword) {
-    alert('Las contraseñas no coinciden')
-    return
-  }
-  
   emit('submit', {
     nombre: form.value.nombre,
     apellido: form.value.apellido,
@@ -155,6 +170,20 @@ function submitForm() {
     emailAlternativo: form.value.emailAlternativo,
     password: props.editMode ? undefined : form.value.password
   })
+  
+  // Mostrar modal de éxito solo cuando no es edición
+  if (!props.editMode) {
+    showSuccessModal.value = true
+    resetForm() // Limpiar el formulario después de enviar
+  } else {
+    emit('close')
+  }
+}
+
+function closeSuccessModal() {
+  showSuccessModal.value = false
+  emit('close')
+  emit('refresh') // Emitir evento para refrescar la lista de usuarios
 }
 </script>
 
@@ -185,5 +214,18 @@ function submitForm() {
 .btn-unefa-primary:hover {
   background-color: #006633;
   color: white;
+}
+
+/* Estilos para el modal de éxito */
+.modal-md {
+  max-width: 500px;
+}
+
+.text-success {
+  color: #28a745 !important;
+}
+
+.bg-success {
+  background-color: #28a745 !important;
 }
 </style>
