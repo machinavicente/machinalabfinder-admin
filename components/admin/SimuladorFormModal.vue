@@ -201,6 +201,7 @@ watch(
   margin-bottom: 1.5rem;
   display: flex;
   align-items: center;
+
 }
 .fecha{
   display: none;
