@@ -5,16 +5,22 @@
         <i class="ri-line-chart-line"></i>
         <span>Panel</span>
       </NuxtLink>
+      <NuxtLink to="/biblioteca" class="nav-item" active-class="active">
+        <i class="ri-book-open-line"></i>
+        <span>Biblioteca</span>
+      </NuxtLink>
       <NuxtLink to="/dashboard" class="nav-item" active-class="active">
         <i class="bi bi-cpu"></i>
         <span>Simuladores</span>
       </NuxtLink>
-
+      <NuxtLink to="/downloads" class="nav-item" active-class="active">
+        <i class="ri-android-line"></i>
+        <span>Aplicaciones</span>
+      </NuxtLink>
       <NuxtLink to="/usuarios" class="nav-item" active-class="active">
         <i class="bi bi-people"></i>
         <span>Usuarios</span>
       </NuxtLink>
-
       <div class="nav-item" @click="logout">
         <i class="bi bi-box-arrow-right text-danger"></i>
         <span class="text-danger">Salir</span>
@@ -24,13 +30,13 @@
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
-const router = useRouter()
+import { useRouter } from "vue-router";
+const router = useRouter();
 
 async function logout() {
-  const { $supabase } = useNuxtApp()
-  await $supabase?.auth.signOut?.()
-  router.push('/')
+  const { $supabase } = useNuxtApp();
+  await $supabase?.auth.signOut?.();
+  router.push("/");
 }
 </script>
 

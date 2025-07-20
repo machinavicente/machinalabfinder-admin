@@ -1,7 +1,7 @@
 <template>
   <div class="admin-sidebar">
     <div class="sidebar-header">
-      <h4 class="text-unefa-primary ">
+      <h4 class="text-unefa-primary">
         <i class="bi bi-speedometer2 me-2"></i>
         <span>MachinaLabFinder Admin</span>
       </h4>
@@ -9,18 +9,28 @@
     <ul class="nav flex-column">
       <li class="nav-item">
         <NuxtLink to="/panel" class="nav-link">
-          <i class="ri-line-chart-linebi bi-cpu"></i> Panel
-        </NuxtLink >
+          <i class="ri-line-chart-line"></i> Panel
+        </NuxtLink>
+      </li>
+      <li class="nav-item">
+        <NuxtLink to="/biblioteca" class="nav-link">
+          <i class="ri-book-open-line"></i> Biblioteca
+        </NuxtLink>
       </li>
       <li class="nav-item">
         <NuxtLink to="/dashboard" class="nav-link">
           <i class="bi bi-cpu"></i> Simuladores
-        </NuxtLink >
+        </NuxtLink>
+      </li>
+      <li class="nav-item">
+        <NuxtLink to="/downloads" class="nav-link">
+          <i class="ri-android-line"></i> Aplicaciones
+        </NuxtLink>
       </li>
       <li class="nav-item">
         <NuxtLink to="/usuarios" class="nav-link">
           <i class="bi bi-people"></i> Usuarios
-        </NuxtLink >
+        </NuxtLink>
       </li>
       <li class="nav-item">
         <button class="nav-link text-danger" @click="$emit('logout')">
@@ -32,7 +42,7 @@
 </template>
 
 <script setup lang="ts">
-defineEmits(['logout'])
+defineEmits(["logout"]);
 </script>
 
 <style scoped>
@@ -96,6 +106,4 @@ defineEmits(['logout'])
     display: none;
   }
 }
-
-
 </style>
