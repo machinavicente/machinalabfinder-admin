@@ -4,6 +4,27 @@
     
     <div class="admin-content">
       <h2 class="mb-4 text-unefa-primary">Panel de Simuladores</h2>
+      
+      <!-- Sistema de alertas mejorado -->
+      <div class="alert-container">
+        <transition-group name="alert">
+          <div 
+            v-for="(alert, index) in activeAlerts" 
+            :key="alert.id"
+            class="alert"
+            :class="`alert-${alert.type}`"
+          >
+            <div class="alert-content">
+              <i :class="alert.icon"></i>
+              <span>{{ alert.message }}</span>
+              <button class="alert-close" @click="removeAlert(index)">
+                <i class="bi bi-x"></i>
+              </button>
+            </div>
+          </div>
+        </transition-group>
+      </div>
+
       <!-- Resumen estadístico -->
       <div class="stats-grid">
         <div class="stat-item">
@@ -86,7 +107,6 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-
 // Componentes
 import AdminSidebar from '@/components/admin/AdminSidebar.vue'
 import StatsCard from '@/components/admin/StatsCard.vue'
@@ -110,6 +130,56 @@ const modalSimuladorVisible = ref(false)
 const modalEliminarVisible = ref(false)
 const simuladorSeleccionado = ref<any>(null)
 const modoEdicion = ref(false)
+
+// Sistema de alertas mejorado
+interface Alert {
+  id: number;
+  type: 'success' | 'error' | 'warning' | 'info';
+  message: string;
+  icon: string;
+  timeout?: number;
+}
+
+const alerts = ref<Alert[]>([])
+let alertIdCounter = 0
+
+const activeAlerts = computed(() => alerts.value)
+
+function addAlert(type: Alert['type'], message: string, timeout = 5000) {
+  const icons = {
+    success: 'bi bi-check-circle-fill',
+    error: 'bi bi-exclamation-circle-fill',
+    warning: 'bi bi-exclamation-triangle-fill',
+    info: 'bi bi-info-circle-fill'
+  }
+  
+  const newAlert: Alert = {
+    id: alertIdCounter++,
+    type,
+    message,
+    icon: icons[type],
+    timeout
+  }
+  
+  alerts.value.push(newAlert)
+  
+  if (timeout > 0) {
+    setTimeout(() => {
+      removeAlertById(newAlert.id)
+    }, timeout)
+  }
+}
+
+function removeAlert(index: number) {
+  alerts.value.splice(index, 1)
+}
+
+function removeAlertById(id: number) {
+  const index = alerts.value.findIndex(alert => alert.id === id)
+  if (index !== -1) {
+    alerts.value.splice(index, 1)
+  }
+}
 
 // Opciones de asignaturas
 const asignaturasOpciones = [
@@ -157,6 +227,7 @@ async function cargarSimuladores() {
     
   } catch (error) {
     console.error('Error al cargar simuladores:', error)
+    addAlert('error', 'Error al cargar los simuladores. Por favor, intente nuevamente.')
   }
 }
 
@@ -201,6 +272,8 @@ async function guardarSimulador(formData: any) {
         .eq('id', simuladorSeleccionado.value.id)
 
       if (error) throw error
+      
+      addAlert('success', 'Simulador actualizado correctamente')
     } else {
       // Creación (agregamos fecha actual)
       const fechaActual = new Date().toISOString()
@@ -212,18 +285,23 @@ async function guardarSimulador(formData: any) {
           categoria: formData.categoria,
           asignatura: formData.asignatura,
           descripcion_del_simulador: formData.descripcion,
-          created_at: fechaActual // <-- Aquí agregamos la fecha
+          created_at: fechaActual
         }])
         .select()
 
       if (error) throw error
+      
+      addAlert('success', 'Simulador creado correctamente')
     }
 
     await cargarSimuladores()
     cerrarModales()
   } catch (error) {
     console.error('Error al guardar simulador:', error)
-    alert(`Error al ${modoEdicion.value ? 'actualizar' : 'crear'} el simulador`)
+    const message = modoEdicion.value 
+      ? 'Error al actualizar el simulador. Verifique los datos e intente nuevamente.' 
+      : 'Error al crear el simulador. Verifique los datos e intente nuevamente.'
+    addAlert('error', message)
   }
 }
 
@@ -240,9 +318,10 @@ async function confirmarEliminar() {
 
     await cargarSimuladores()
     cerrarModales()
+    addAlert('success', 'Simulador eliminado correctamente')
   } catch (error) {
     console.error('Error al eliminar simulador:', error)
-    alert('Error al eliminar el simulador')
+    addAlert('error', 'Error al eliminar el simulador. Por favor, intente nuevamente.')
   }
 }
 
@@ -258,9 +337,7 @@ function formatFecha(fecha: string | Date): string {
 function escapeCsvField(field: any): string {
   const stringField = String(field === null || field === undefined ? '' : field)
 
-  // Si el campo contiene comas, comillas dobles o saltos de línea, lo encerramos en comillas dobles.
   if (stringField.search(/("|,|\n)/g) >= 0) {
-    // Escapamos las comillas dobles duplicándolas
     return `"${stringField.replace(/"/g, '""')}"`
   }
   return stringField
@@ -269,7 +346,7 @@ function escapeCsvField(field: any): string {
 async function exportarDatos() {
   try {
     if (simuladores.value.length === 0) {
-      alert('No hay datos de simuladores para exportar.')
+      addAlert('warning', 'No hay datos de simuladores para exportar.')
       return
     }
 
@@ -289,12 +366,13 @@ async function exportarDatos() {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+    
+    addAlert('success', 'Exportación completada correctamente')
   } catch (error) {
     console.error('Error al exportar datos:', error)
-    alert('Ocurrió un error al intentar exportar los datos.')
+    addAlert('error', 'Error al exportar los datos. Por favor, intente nuevamente.')
   }
 } 
-
 
 onMounted(() => {
   if (!isAuthenticated()) {
@@ -305,6 +383,7 @@ onMounted(() => {
 const handleLogout = () => {
   logout()
 }
+
 // Carga inicial
 onMounted(() => {
   cargarSimuladores()
@@ -325,6 +404,97 @@ onMounted(() => {
   padding: 1.5rem;
   transition: margin-left 0.3s ease;
   overflow-x: hidden;
+}
+
+/* Estilos para el sistema de alertas */
+.alert-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1100;
+  max-width: 400px;
+  width: 100%;
+}
+
+.alert {
+  position: relative;
+  padding: 1rem 1.5rem;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.alert-success {
+  background-color: #d4edda;
+  color: #155724;
+  border-left: 4px solid #28a745;
+}
+
+.alert-error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border-left: 4px solid #dc3545;
+}
+
+.alert-warning {
+  background-color: #fff3cd;
+  color: #856404;
+  border-left: 4px solid #ffc107;
+}
+
+.alert-info {
+  background-color: #d1ecf1;
+  color: #0c5460;
+  border-left: 4px solid #17a2b8;
+}
+
+.alert-content {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.alert i {
+  margin-right: 12px;
+  font-size: 1.25rem;
+}
+
+.alert-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  font-size: 1.2rem;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.alert-close:hover {
+  opacity: 1;
+}
+
+/* Transiciones para alertas */
+.alert-enter-from,
+.alert-leave-to {
+  opacity: 0;
+  transform: translateX(100px);
+}
+
+.alert-enter-active,
+.alert-leave-active {
+  transition: all 0.3s ease;
+}
+
+.alert-move {
+  transition: transform 0.3s ease;
 }
 
 .bg-unefa-primary {
@@ -373,7 +543,7 @@ onMounted(() => {
 }
 
 .stat-item {
-  min-width: 0; /* Evita que las tarjetas se desborden */
+  min-width: 0;
 }
 
 /* Estilos para acciones rápidas */
@@ -402,6 +572,10 @@ onMounted(() => {
   .stats-grid {
     gap: 1rem;
   }
+  
+  .alert-container {
+    max-width: 350px;
+  }
 }
 
 @media (max-width: 991.98px) {
@@ -416,6 +590,10 @@ onMounted(() => {
   
   .quick-actions .btn {
     min-width: 160px;
+  }
+  
+  .alert-container {
+    max-width: 300px;
   }
 }
 
@@ -435,6 +613,16 @@ onMounted(() => {
   .quick-actions .btn {
     width: 100%;
     min-width: 0;
+  }
+  
+  .alert-container {
+    max-width: 280px;
+    top: 10px;
+    right: 10px;
+  }
+  
+  .alert {
+    padding: 0.8rem 1.2rem;
   }
 }
 
@@ -459,6 +647,19 @@ onMounted(() => {
     padding: 0.5rem;
     font-size: 0.9rem;
   }
+  
+  .alert-container {
+    max-width: 250px;
+  }
+  
+  .alert {
+    padding: 0.7rem 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .alert i {
+    font-size: 1.1rem;
+  }
 }
 
 @media (max-width: 400px) {
@@ -472,6 +673,10 @@ onMounted(() => {
   
   .card-header h5 i {
     margin-right: 0.5rem;
+  }
+  
+  .alert-container {
+    max-width: 220px;
   }
 }
 </style>

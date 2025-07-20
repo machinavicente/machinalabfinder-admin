@@ -1,15 +1,34 @@
 <template>
   <div class="admin-dashboard">
-    <!-- Sidebar (deberás incluir tu componente AdminSidebar aquí) -->
     <AdminSidebar @logout="handleLogout" />
     
     <div class="admin-content">
       <h2 class="mb-4 text-unefa-primary">Panel de Descargas</h2>
       
+      <!-- Sistema de alertas mejorado -->
+      <div class="alert-container">
+        <transition-group name="alert">
+          <div 
+            v-for="(alert, index) in activeAlerts" 
+            :key="alert.id"
+            class="alert"
+            :class="`alert-${alert.type}`"
+          >
+            <div class="alert-content">
+              <i :class="alert.icon"></i>
+              <span>{{ alert.message }}</span>
+              <button class="alert-close" @click="removeAlert(index)">
+                <i class="bi bi-x"></i>
+              </button>
+            </div>
+          </div>
+        </transition-group>
+      </div>
+
       <!-- Resumen estadístico -->
       <div class="stats-grid">
         <div class="stat-item">
-          <div class="stat-card ">
+          <div class="stat-card">
             <div class="stat-icon">
               <i class="bi bi-download"></i>
             </div>
@@ -20,7 +39,7 @@
           </div>
         </div>
         <div class="stat-item">
-          <div class="stat-card ">
+          <div class="stat-card">
             <div class="stat-icon">
               <i class="bi bi-book"></i>
             </div>
@@ -31,7 +50,7 @@
           </div>
         </div>
         <div class="stat-item">
-          <div class="stat-card ">
+          <div class="stat-card">
             <div class="stat-icon">
               <i class="bi bi-windows"></i>
             </div>
@@ -71,7 +90,7 @@
         </div>
         <div class="card-body tablex">
           <div class="table-responsive">
-            <table class="table table-hover ">
+            <table class="table table-hover">
               <thead>
                 <tr>
                   <th>Nombre</th>
@@ -187,7 +206,7 @@
                   id="sistema" 
                   v-model="formData.sistema_operativo"
                 >
-                  <option value="">No especificado</option>
+                  <option value="" disabled>No especificado</option>
                   <option v-for="sistema in sistemasOperativosOpciones" :key="sistema" :value="sistema">
                     {{ sistema }}
                   </option>
@@ -248,6 +267,56 @@ const totalDescargas = ref(0)
 const totalAsignaturas = ref(0)
 const totalSistemasOperativos = ref(0)
 
+// Sistema de alertas mejorado
+interface Alert {
+  id: number;
+  type: 'success' | 'error' | 'warning' | 'info';
+  message: string;
+  icon: string;
+  timeout?: number;
+}
+
+const alerts = ref<Alert[]>([])
+let alertIdCounter = 0
+
+const activeAlerts = computed(() => alerts.value)
+
+function addAlert(type: Alert['type'], message: string, timeout = 5000) {
+  const icons = {
+    success: 'bi bi-check-circle-fill',
+    error: 'bi bi-exclamation-circle-fill',
+    warning: 'bi bi-exclamation-triangle-fill',
+    info: 'bi bi-info-circle-fill'
+  }
+  
+  const newAlert: Alert = {
+    id: alertIdCounter++,
+    type,
+    message,
+    icon: icons[type],
+    timeout
+  }
+  
+  alerts.value.push(newAlert)
+  
+  if (timeout > 0) {
+    setTimeout(() => {
+      removeAlertById(newAlert.id)
+    }, timeout)
+  }
+}
+
+function removeAlert(index: number) {
+  alerts.value.splice(index, 1)
+}
+
+function removeAlertById(id: number) {
+  const index = alerts.value.findIndex(alert => alert.id === id)
+  if (index !== -1) {
+    alerts.value.splice(index, 1)
+  }
+}
+
 // Opciones para formulario
 const asignaturasOpciones = [
   "Matemáticas", "Química", "Física I", "Cálculo Numérico", "Probabilidad y Estadística", 
@@ -297,7 +366,7 @@ async function cargarDescargas() {
     const { data, error } = await supabase
       .from('descargas')
       .select('*')
-      .order('id', { ascending: false }) // Cambiado de created_at a id
+      .order('id', { ascending: false })
     
     if (error) throw error
     
@@ -313,7 +382,7 @@ async function cargarDescargas() {
     
   } catch (error) {
     console.error('Error al cargar descargas:', error)
-    alert('Error al cargar los datos de descargas: ' + error.message)
+    addAlert('error', 'Error al cargar los datos de descargas. Por favor, intente nuevamente.')
   }
 }
 
@@ -376,6 +445,8 @@ async function guardarDescarga() {
         .eq('id', descargaSeleccionada.value.id)
 
       if (error) throw error
+      
+      addAlert('success', 'Programa actualizado correctamente')
     } else {
       // Creación
       const { data, error } = await supabase
@@ -390,13 +461,18 @@ async function guardarDescarga() {
         .select()
 
       if (error) throw error
+      
+      addAlert('success', 'Programa creado correctamente')
     }
 
     await cargarDescargas()
     cerrarModales()
   } catch (error) {
     console.error('Error al guardar descarga:', error)
-    alert(`Error al ${modoEdicion.value ? 'actualizar' : 'crear'} el programa: ${error.message}`)
+    const message = modoEdicion.value 
+      ? 'Error al actualizar el programa. Verifique los datos e intente nuevamente.' 
+      : 'Error al crear el programa. Verifique los datos e intente nuevamente.'
+    addAlert('error', message)
   }
 }
 
@@ -413,16 +489,17 @@ async function confirmarEliminar() {
 
     await cargarDescargas()
     cerrarModales()
+    addAlert('success', 'Programa eliminado correctamente')
   } catch (error) {
     console.error('Error al eliminar programa:', error)
-    alert('Error al eliminar el programa: ' + error.message)
+    addAlert('error', 'Error al eliminar el programa. Por favor, intente nuevamente.')
   }
 }
 
 async function exportarDatos() {
   try {
     if (descargas.value.length === 0) {
-      alert('No hay datos de programas para exportar.')
+      addAlert('warning', 'No hay datos de programas para exportar.')
       return
     }
 
@@ -447,9 +524,11 @@ async function exportarDatos() {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+    
+    addAlert('success', 'Exportación completada correctamente')
   } catch (error) {
     console.error('Error al exportar datos:', error)
-    alert('Ocurrió un error al intentar exportar los datos: ' + error.message)
+    addAlert('error', 'Error al exportar los datos. Por favor, intente nuevamente.')
   }
 }
 
@@ -481,6 +560,97 @@ onMounted(() => {
   padding: 1.5rem;
   transition: margin-left 0.3s ease;
   overflow-x: hidden;
+}
+
+/* Estilos para el sistema de alertas */
+.alert-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1100;
+  max-width: 400px;
+  width: 100%;
+}
+
+.alert {
+  position: relative;
+  padding: 1rem 1.5rem;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.alert-success {
+  background-color: #d4edda;
+  color: #155724;
+  border-left: 4px solid #28a745;
+}
+
+.alert-error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border-left: 4px solid #dc3545;
+}
+
+.alert-warning {
+  background-color: #fff3cd;
+  color: #856404;
+  border-left: 4px solid #ffc107;
+}
+
+.alert-info {
+  background-color: #d1ecf1;
+  color: #0c5460;
+  border-left: 4px solid #17a2b8;
+}
+
+.alert-content {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.alert i {
+  margin-right: 12px;
+  font-size: 1.25rem;
+}
+
+.alert-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  font-size: 1.2rem;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.alert-close:hover {
+  opacity: 1;
+}
+
+/* Transiciones para alertas */
+.alert-enter-from,
+.alert-leave-to {
+  opacity: 0;
+  transform: translateX(100px);
+}
+
+.alert-enter-active,
+.alert-leave-active {
+  transition: all 0.3s ease;
+}
+
+.alert-move {
+  transition: transform 0.3s ease;
 }
 
 .bg-unefa-primary {
@@ -533,6 +703,8 @@ onMounted(() => {
 }
 
 .stat-card {
+  background-color: #002147;
+  color: #FFC72C;
   border-radius: 10px;
   padding: 1.5rem;
   display: flex;
@@ -562,7 +734,7 @@ onMounted(() => {
   overflow-x: auto;
 }
 .tablex{
-height: 500px !important; 
+  height: 500px !important; 
   max-height: 500px !important;
   overflow-y: scroll !important;
 }
@@ -669,15 +841,6 @@ height: 500px !important;
 .btn-close:hover {
   opacity: 1;
 }
-.stat-card {
-  background-color: #002147;
-  color: #FFC72C;
-  display: flex;
-  align-items: center;
-  padding: 1.5rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
 
 /* Responsive */
 @media (max-width: 1199.98px) {
@@ -687,6 +850,10 @@ height: 500px !important;
   
   .stats-grid {
     gap: 1rem;
+  }
+  
+  .alert-container {
+    max-width: 350px;
   }
 }
 
@@ -702,6 +869,10 @@ height: 500px !important;
   
   .quick-actions .btn {
     min-width: 160px;
+  }
+  
+  .alert-container {
+    max-width: 300px;
   }
 }
 
@@ -721,6 +892,16 @@ height: 500px !important;
   .quick-actions .btn {
     width: 100%;
     min-width: 0;
+  }
+  
+  .alert-container {
+    max-width: 280px;
+    top: 10px;
+    right: 10px;
+  }
+  
+  .alert {
+    padding: 0.8rem 1.2rem;
   }
 }
 
@@ -746,9 +927,17 @@ height: 500px !important;
     font-size: 0.9rem;
   }
   
-  .modal-content {
-    margin: 0.5rem;
-    max-height: 95vh;
+  .alert-container {
+    max-width: 250px;
+  }
+  
+  .alert {
+    padding: 0.7rem 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .alert i {
+    font-size: 1.1rem;
   }
 }
 
@@ -775,6 +964,10 @@ height: 500px !important;
   
   .stat-info h3 {
     font-size: 1.5rem;
+  }
+  
+  .alert-container {
+    max-width: 220px;
   }
 }
 </style>

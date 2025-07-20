@@ -60,7 +60,7 @@
               <div class="col-md-6">
                 <label for="password" class="form-label">Contraseña</label>
                 <input 
-                  placeholder="unefa-user"
+                  placeholder="labfinder-user"
                   type="text" 
                   class="form-control" 
                   id="password" 
@@ -84,32 +84,6 @@
     </div>
   </div>
 
-  <!-- Modal de confirmación -->
-  <div class="modal fade show" tabindex="-1" role="dialog" style="display: block;" v-if="showSuccessModal">
-    <div class="modal-dialog modal-md" role="document">
-      <div class="modal-content">
-        <div class="modal-header bg-success text-white">
-          <h5 class="modal-title">
-            <i class="bi bi-check-circle-fill"></i>
-            Operación Exitosa
-          </h5>
-          <button type="button" class="btn-close btn-close-white" @click="closeSuccessModal"></button>
-        </div>
-        <div class="modal-body text-center">
-          <div class="mb-3">
-            <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
-          </div>
-          <h4 class="mb-3">¡Usuario {{ editMode ? 'actualizado' : 'creado' }} con éxito!</h4>
-          <p>Los cambios se han guardado correctamente en el sistema.</p>
-        </div>
-        <div class="modal-footer justify-content-center">
-          <button type="button" class="btn btn-success" @click="closeSuccessModal">
-            Aceptar
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- Backdrop para ambos modales -->
   <div class="modal-backdrop fade show" v-if="visible || showSuccessModal"></div>
@@ -158,7 +132,7 @@ function resetForm() {
     apellido: '',
     email: '',
     emailAlternativo: '',
-    password: 'unefa-user' // Restablecer valor por defecto
+    password: 'labfinder-user' // Restablecer valor por defecto
   }
 }
 

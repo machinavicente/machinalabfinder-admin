@@ -4,6 +4,27 @@
     
     <div class="admin-content">
       <h2 class="mb-4 text-unefa-primary">Panel de Usuarios</h2>
+      
+      <!-- Alertas de error/success -->
+      <div class="alert-container">
+        <transition-group name="alert">
+          <div 
+            v-for="(alert, index) in activeAlerts" 
+            :key="alert.id"
+            class="alert"
+            :class="`alert-${alert.type}`"
+          >
+            <div class="alert-content">
+              <i :class="alert.icon"></i>
+              <span>{{ alert.message }}</span>
+              <button class="alert-close" @click="removeAlert(index)">
+                <i class="bi bi-x"></i>
+              </button>
+            </div>
+          </div>
+        </transition-group>
+      </div>
+
       <!-- Resumen estadístico mejorado -->
       <div class="stats-grid">
         <div class="stat-card">
@@ -79,7 +100,7 @@
             <i class="bi bi-people-fill me-2"></i>Listado de Usuarios
           </h5>
         </div>
-        <div class="card-body">
+        <div class="card-body ">
           <div class="table-responsive">
             <table class="table table-hover">
               <thead>
@@ -138,26 +159,6 @@
               </tbody>
             </table>
           </div>
-
-          <!-- Paginación -->
-          <nav v-if="totalPaginas > 1">
-            <ul class="pagination justify-content-center">
-              <li class="page-item" :class="{ disabled: paginaActual === 1 }">
-                <button class="page-link" @click="paginaAnterior">&laquo;</button>
-              </li>
-              <li 
-                class="page-item" 
-                v-for="pagina in totalPaginas" 
-                :key="pagina"
-                :class="{ active: pagina === paginaActual }"
-              >
-                <button class="page-link" @click="irAPagina(pagina)">{{ pagina }}</button>
-              </li>
-              <li class="page-item" :class="{ disabled: paginaActual === totalPaginas }">
-                <button class="page-link" @click="paginaSiguiente">&raquo;</button>
-              </li>
-            </ul>
-          </nav>
         </div>
       </div>
 
@@ -236,33 +237,8 @@
         </div>
       </div>
 
-      <!-- Modal de éxito después de eliminar -->
-      <div class="modal fade show" tabindex="-1" role="dialog" style="display: block;" v-if="showDeleteSuccessModal">
-        <div class="modal-dialog modal-dialog-centered" role="document">
-          <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-              <h5 class="modal-title">
-                <i class="bi bi-check-circle-fill me-2"></i>
-                Eliminación Exitosa
-              </h5>
-              <button type="button" class="btn-close btn-close-white" @click="showDeleteSuccessModal = false"></button>
-            </div>
-            <div class="modal-body text-center">
-              <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
-              <h4 class="mt-3">¡Usuario(s) eliminado(s) con éxito!</h4>
-              <p>La operación se completó correctamente.</p>
-            </div>
-            <div class="modal-footer justify-content-center">
-              <button type="button" class="btn btn-success" @click="showDeleteSuccessModal = false">
-                Aceptar
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- Backdrop para todos los modales -->
-      <div class="modal-backdrop fade show" v-if="modalUsuarioVisible || modalEliminarVisible || modalEliminacionMasivaVisible || showDeleteSuccessModal"></div>
+      <div class="modal-backdrop fade show" v-if="modalUsuarioVisible || modalEliminarVisible || modalEliminacionMasivaVisible"></div>
     </div>
   </div>
 </template>
@@ -300,9 +276,58 @@ const usuariosPorPagina = ref(10)
 const modalUsuarioVisible = ref(false)
 const modalEliminarVisible = ref(false)
 const modalEliminacionMasivaVisible = ref(false)
-const showDeleteSuccessModal = ref(false)
 const usuarioSeleccionado = ref<any>(null)
 const modoEdicion = ref(false)
+
+// Sistema de alertas
+interface Alert {
+  id: number;
+  type: 'success' | 'error' | 'warning' | 'info';
+  message: string;
+  icon: string;
+  timeout?: number;
+}
+
+const alerts = ref<Alert[]>([])
+let alertIdCounter = 0
+
+const activeAlerts = computed(() => alerts.value)
+
+function addAlert(type: Alert['type'], message: string, timeout = 5000) {
+  const icons = {
+    success: 'bi bi-check-circle-fill',
+    error: 'bi bi-exclamation-circle-fill',
+    warning: 'bi bi-exclamation-triangle-fill',
+    info: 'bi bi-info-circle-fill'
+  }
+  
+  const newAlert: Alert = {
+    id: alertIdCounter++,
+    type,
+    message,
+    icon: icons[type],
+    timeout
+  }
+  
+  alerts.value.push(newAlert)
+  
+  if (timeout > 0) {
+    setTimeout(() => {
+      removeAlertById(newAlert.id)
+    }, timeout)
+  }
+}
+
+function removeAlert(index: number) {
+  alerts.value.splice(index, 1)
+}
+
+function removeAlertById(id: number) {
+  const index = alerts.value.findIndex(alert => alert.id === id)
+  if (index !== -1) {
+    alerts.value.splice(index, 1)
+  }
+}
 
 // Carga los datos iniciales
 async function cargarUsuarios() {
@@ -350,6 +375,7 @@ async function cargarUsuarios() {
     
   } catch (error) {
     console.error('Error al cargar usuarios:', error)
+    addAlert('error', 'Error al cargar los usuarios. Por favor, intente nuevamente.')
   }
 }
 
@@ -440,6 +466,29 @@ function cerrarModales() {
 // Operaciones CRUD
 async function guardarUsuario(formData: any) {
   try {
+    // --- Validación de Correo Electrónico Duplicado ---
+    const { data: existingUser, error: checkError } = await supabase
+      .from('usuarios')
+      .select('id, email')
+      .eq('email', formData.email)
+      .limit(1)
+      .single()
+
+    // Ignoramos el error 'PGRST116' que significa "no se encontró la fila", lo cual es bueno en este caso.
+    if (checkError && checkError.code !== 'PGRST116') {
+      throw checkError
+    }
+
+    // Si se encontró un usuario con ese correo
+    if (existingUser) {
+      // En modo creación, o en modo edición si el ID encontrado es diferente al del usuario actual
+      if (!modoEdicion.value || (modoEdicion.value && existingUser.id !== usuarioSeleccionado.value.id)) {
+        addAlert('error', `El correo electrónico '${formData.email}' ya está registrado. Por favor, utilice otra dirección.`)
+        return // Detener la ejecución para no guardar el duplicado
+      }
+    }
+    // --- Fin de la Validación ---
+
     if (modoEdicion.value && usuarioSeleccionado.value) {
       // Actualizar usuario
       const { error } = await supabase
@@ -453,6 +502,8 @@ async function guardarUsuario(formData: any) {
         .eq('id', usuarioSeleccionado.value.id)
 
       if (error) throw error
+      
+      addAlert('success', 'Usuario actualizado correctamente')
     } else {
       // Crear nuevo usuario
       const { data, error } = await supabase
@@ -468,13 +519,18 @@ async function guardarUsuario(formData: any) {
         .select()
 
       if (error) throw error
+      
+      addAlert('success', 'Usuario creado correctamente')
     }
 
     await cargarUsuarios()
     cerrarModales()
   } catch (error) {
     console.error('Error al guardar usuario:', error)
-    alert(`Error al ${modoEdicion.value ? 'actualizar' : 'crear'} el usuario`)
+    const message = modoEdicion.value 
+      ? 'Error al actualizar el usuario. Verifique los datos e intente nuevamente.' 
+      : 'Error al crear el usuario. Verifique los datos e intente nuevamente.'
+    addAlert('error', message)
   }
 }
 
@@ -491,10 +547,10 @@ async function confirmarEliminar() {
 
     await cargarUsuarios()
     cerrarModales()
-    showDeleteSuccessModal.value = true
+    addAlert('success', 'Usuario eliminado correctamente')
   } catch (error) {
     console.error('Error al eliminar usuario:', error)
-    alert('Error al eliminar el usuario')
+    addAlert('error', 'Error al eliminar el usuario. Por favor, intente nuevamente.')
   }
 }
 
@@ -510,10 +566,10 @@ async function confirmarEliminacionMasiva() {
     usuariosSeleccionados.value = []
     await cargarUsuarios()
     cerrarModales()
-    showDeleteSuccessModal.value = true
+    addAlert('success', `Se eliminaron ${usuariosSeleccionados.value.length} usuarios correctamente`)
   } catch (error) {
     console.error('Error al eliminar usuarios:', error)
-    alert('Error al eliminar los usuarios seleccionados')
+    addAlert('error', 'Error al eliminar los usuarios seleccionados. Por favor, intente nuevamente.')
   }
 }
 
@@ -536,15 +592,17 @@ async function exportarUsuarios() {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+    
+    addAlert('success', 'Exportación completada correctamente')
   } catch (error) {
     console.error('Error al exportar usuarios:', error)
-    alert('Error al exportar los datos')
+    addAlert('error', 'Error al exportar los datos. Por favor, intente nuevamente.')
   }
 }
 
 // Utilidades
 function formatFecha(fecha: string) {
-  return new Date(fecha).toLocaleDateString('es-ES', {
+  return new Date(fecha).toLocaleDateString('es-VE', {
     year: 'numeric',
     month: 'short',
     day: 'numeric'
@@ -581,6 +639,97 @@ onMounted(() => {
   padding: 1.5rem;
   transition: margin-left 0.3s ease;
   overflow-x: hidden;
+}
+
+/* Estilos para el sistema de alertas */
+.alert-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1100;
+  max-width: 400px;
+  width: 100%;
+}
+
+.alert {
+  position: relative;
+  padding: 1rem 1.5rem;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.alert-success {
+  background-color: #d4edda;
+  color: #155724;
+  border-left: 4px solid #28a745;
+}
+
+.alert-error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border-left: 4px solid #dc3545;
+}
+
+.alert-warning {
+  background-color: #fff3cd;
+  color: #856404;
+  border-left: 4px solid #ffc107;
+}
+
+.alert-info {
+  background-color: #d1ecf1;
+  color: #0c5460;
+  border-left: 4px solid #17a2b8;
+}
+
+.alert-content {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.alert i {
+  margin-right: 12px;
+  font-size: 1.25rem;
+}
+
+.alert-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  font-size: 1.2rem;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.alert-close:hover {
+  opacity: 1;
+}
+
+/* Transiciones para alertas */
+.alert-enter-from,
+.alert-leave-to {
+  opacity: 0;
+  transform: translateX(100px);
+}
+
+.alert-enter-active,
+.alert-leave-active {
+  transition: all 0.3s ease;
+}
+
+.alert-move {
+  transition: transform 0.3s ease;
 }
 
 .bg-unefa-primary {
@@ -631,7 +780,7 @@ onMounted(() => {
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* Estilos para acciones rápidas - Versión mejorada */
+/* Estilos para acciones rápidas*/
 .quick-actions {
   display: flex;
   flex-wrap: wrap;
@@ -657,6 +806,18 @@ onMounted(() => {
 .table-responsive {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  max-height: 450px; /* O la altura que prefieras, ej: 50vh */
+  overflow-y: auto;
+}
+
+/* Estilos para la cabecera fija (sticky header) */
+.table thead th {
+  position: -webkit-sticky; /* Para Safari */
+  position: sticky;
+  top: 0;
+  z-index: 2; 
+  background-color: #ffffff; 
+  box-shadow: inset 0 -2px 0 #dee2e6; 
 }
 
 /* Media queries para responsive design - Versión mejorada */
@@ -673,6 +834,10 @@ onMounted(() => {
     min-width: 160px;
     padding: 0.65rem 0.9rem;
     font-size: 0.95rem;
+  }
+  
+  .alert-container {
+    max-width: 350px;
   }
 }
 
@@ -698,6 +863,10 @@ onMounted(() => {
     min-width: 140px;
     font-size: 0.9rem;
   }
+  
+  .alert-container {
+    max-width: 300px;
+  }
 }
 
 @media (max-width: 767.98px) {
@@ -720,6 +889,16 @@ onMounted(() => {
   .quick-actions .btn {
     width: 100%;
     min-width: 0;
+  }
+  
+  .alert-container {
+    max-width: 280px;
+    top: 10px;
+    right: 10px;
+  }
+  
+  .alert {
+    padding: 0.8rem 1.2rem;
   }
 }
 
@@ -748,6 +927,19 @@ onMounted(() => {
     padding: 0.6rem;
     font-size: 0.85rem;
   }
+  
+  .alert-container {
+    max-width: 250px;
+  }
+  
+  .alert {
+    padding: 0.7rem 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .alert i {
+    font-size: 1.1rem;
+  }
 }
 
 @media (max-width: 400px) {
@@ -762,6 +954,10 @@ onMounted(() => {
   .card-header h5 i {
     margin-right: 0.4rem;
     font-size: 0.9em;
+  }
+  
+  .alert-container {
+    max-width: 220px;
   }
 }
 

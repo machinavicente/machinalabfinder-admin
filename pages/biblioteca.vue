@@ -3,7 +3,7 @@
     <AdminSidebar @logout="handleLogout" />
     
     <div class="admin-content">
-      <h2 class="mb-4 text-unefa-primary">Biblioteca de Imágenes</h2>
+      <h2 class="mb-4 text-unefa-primary">Panel de Biblioteca</h2>
       
       <!-- Resumen estadístico -->
       <div class="stats-grid">
@@ -501,7 +501,7 @@ async function subirImagenes() {
           cacheControl: '3600',
           contentType: mimeType,
           upsert: true,
-          duplex: 'half'  // Necesario para algunos navegadores
+          duplex: 'half'  
         });
 
       if (error) throw error;

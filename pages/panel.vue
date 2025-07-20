@@ -5,13 +5,15 @@
     <main class="dashboard-main">
       <h2 class="mb-4 text-unefa-primary">Panel de Control</h2>
 
-      <div class="stats-grid mb-4">
+      <div class="stats-grid mb-4 wid">
         <StatsCard :value="totalSimuladores" label="Simuladores" icon="bi-cpu" color="primary" />
         <StatsCard :value="totalAsignaturas" label="Asignaturas" icon="bi-book" color="success" />
         <StatsCard :value="totalUsuarios" label="Usuarios" icon="bi-people" color="info" />
+        <StatsCard :value="totalImagenes" label="Recursos visuales" icon="bi-images" color="warning" />
+        <StatsCard :value="totalDescargas" label="Aplicaciones" icon="bi-download" color="danger" />
       </div>
 
-      <div class="charts-grid mb-5">
+      <div class="charts-grid mb-5 wid">
         <div class="chart-card">
           <h5>Simuladores por Asignatura</h5>
           <div class="canvas-wrapper">
@@ -76,6 +78,8 @@ const totalSimuladores = ref(0)
 const totalAsignaturas = ref(0)
 const totalCategorias = ref(0)
 const totalUsuarios = ref(0)
+const totalImagenes = ref(0)
+const totalDescargas = ref(0)
 
 const usuariosUltimos7Dias = ref([])
 const simuladores = ref([])
@@ -83,60 +87,95 @@ const simuladores = ref([])
 let chartAsignaturas: Chart | null = null
 let chartUsuarios: Chart | null = null
 
-const colors = [
-  'rgba(13, 110, 253, 0.7)',
-  'rgba(25, 135, 84, 0.7)',
-  'rgba(255, 193, 7, 0.7)',
-  'rgba(13, 202, 240, 0.7)',
-  'rgba(220, 53, 69, 0.7)',
-  'rgba(108, 117, 125, 0.7)'
-]
-
-const visibleSegments = reactive<boolean[]>([])
-const diasConDiaSemana = ref<string[]>([])
-
-function renderChart(
-  canvasId: string,
-  labels: string[],
-  data: number[],
-  existingChart: Chart | null,
-  label: string,
-  type = 'bar'
-) {
+function renderUsuariosChart(canvasId: string, labels: string[], data: number[], existingChart: Chart | null) {
   const ctx = (document.getElementById(canvasId) as HTMLCanvasElement)?.getContext('2d')
   if (!ctx) return existingChart
 
   if (existingChart) existingChart.destroy()
 
-  const commonOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: type !== 'bar' }
+  // Crear un gradiente para el fondo del área del gráfico
+  const gradient = ctx.createLinearGradient(0, 0, 0, 300)
+  gradient.addColorStop(0, 'rgba(13, 110, 253, 0.5)')
+  gradient.addColorStop(1, 'rgba(13, 110, 253, 0)')
+
+  const config = {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+          label: 'Nuevos Usuarios',
+          data,
+          backgroundColor: gradient,
+          borderColor: 'rgba(13, 110, 253, 1)',
+          pointBackgroundColor: 'rgba(13, 110, 253, 1)',
+          pointBorderColor: '#fff',
+          pointHoverBackgroundColor: '#fff',
+          pointHoverBorderColor: 'rgba(13, 110, 253, 1)',
+          fill: true,
+          tension: 0.4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: '#002147',
+          titleColor: '#FFC72C',
+          bodyColor: '#fff',
+          padding: 10,
+          cornerRadius: 4
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: { color: '#e9ecef' },
+          ticks: { precision: 0 }
+        },
+        x: { grid: { display: false } }
+      },
+      interaction: { mode: 'index', intersect: false }
     }
   }
 
-  let config: any = {
-    type,
+  return new Chart(ctx, config)
+}
+
+function renderAsignaturasChart(canvasId: string, labels: string[], data: number[], existingChart: Chart | null) {
+  const ctx = (document.getElementById(canvasId) as HTMLCanvasElement)?.getContext('2d')
+  if (!ctx) return existingChart
+
+  if (existingChart) existingChart.destroy()
+
+  const colors = [
+    'rgba(13, 110, 253, 0.7)', 'rgba(25, 135, 84, 0.7)', 'rgba(255, 193, 7, 0.7)',
+    'rgba(13, 202, 240, 0.7)', 'rgba(220, 53, 69, 0.7)', 'rgba(108, 117, 125, 0.7)'
+  ]
+
+  const config = {
+    type: 'bar',
     data: {
       labels,
-      datasets: [
-        {
-          label,
+      datasets: [{
+          label: 'Simuladores por Asignatura',
           data,
           backgroundColor: colors,
           borderColor: colors.map(c => c.replace(/0\.7\)$/, '1)')),
           borderWidth: 1,
-          borderRadius: type === 'bar' ? 4 : 0
-        }
-      ]
+          borderRadius: 4
+      }]
     },
     options: {
-      ...commonOptions,
-      scales: type === 'bar' ? { y: { beginAtZero: true } } : {}
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
     }
   }
-
   return new Chart(ctx, config)
 }
 
@@ -155,6 +194,16 @@ async function cargarDatos() {
     const { count } = await supabase.from('usuarios').select('*', { count: 'exact', head: true })
     totalUsuarios.value = count || 0
 
+    // Obtener total de imágenes de la biblioteca
+    const { data: imageFiles, error: errImg } = await supabase.storage.from('biblioteca').list('', { limit: 10000 })
+    if (errImg) throw errImg
+    totalImagenes.value = imageFiles?.length || 0
+
+    // Obtener total de descargas (asumiendo que la tabla se llama 'descargas')
+    const { count: descargasCount, error: errDescargas } = await supabase.from('descargas').select('*', { count: 'exact', head: true })
+    if (errDescargas) throw errDescargas
+    totalDescargas.value = descargasCount || 0
+
     const fecha7Dias = new Date()
     fecha7Dias.setDate(fecha7Dias.getDate() - 7)
     const { data: usuariosRecientes } = await supabase
@@ -170,46 +219,49 @@ async function cargarDatos() {
     simuladores.value.forEach(s => {
       asignaturaCount[s.asignatura] = (asignaturaCount[s.asignatura] || 0) + 1
     })
-    chartAsignaturas = renderChart(
+    chartAsignaturas = renderAsignaturasChart(
       'chartAsignaturas',
       Object.keys(asignaturaCount),
       Object.values(asignaturaCount),
-      chartAsignaturas,
-      'Simuladores por Asignatura',
-      'bar'
+      chartAsignaturas
     )
 
-    const usuariosPorDia: Record<string, number> = {}
-    for (let i = 0; i < 7; i++) {
-      const d = new Date()
-      d.setDate(d.getDate() - i)
-      const key = d.toISOString().split('T')[0]
+    // Lógica de usuarios por día con zona horaria de Venezuela
+    const usuariosPorDia: { [key: string]: number } = {}
+    const diasLabels: string[] = []
+    const hoy = new Date()
+    const timeZone = 'America/Caracas'
+
+    // Inicializar los últimos 7 días
+    for (let i = 6; i >= 0; i--) {
+      const fecha = new Date(hoy)
+      fecha.setDate(hoy.getDate() - i)
+      const key = fecha.toLocaleDateString('es-VE', { timeZone })
       usuariosPorDia[key] = 0
+      diasLabels.push(
+        fecha.toLocaleDateString('es-VE', {
+          weekday: 'short',
+          day: 'numeric',
+          month: 'short',
+          timeZone
+        })
+      )
     }
-    usuariosUltimos7Dias.value.forEach(u => {
-      const dia = u.creado_en.split('T')[0]
-      if (usuariosPorDia[dia] !== undefined) usuariosPorDia[dia]++
+
+    // Agrupar usuarios por fecha de registro en la zona horaria correcta
+    usuariosUltimos7Dias.value.forEach((u: any) => {
+      const fechaRegistro = new Date(u.creado_en)
+      const key = fechaRegistro.toLocaleDateString('es-VE', { timeZone })
+      if (usuariosPorDia[key] !== undefined) {
+        usuariosPorDia[key]++
+      }
     })
 
-    const dias = Object.keys(usuariosPorDia).sort()
-    const cuentas = dias.map(d => usuariosPorDia[d])
-
-    diasConDiaSemana.value = dias.map(fechaStr => {
-      const date = new Date(fechaStr)
-      const diaSemana = date.toLocaleDateString('es-ES', { weekday: 'short' })
-      const diaMes = date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })
-      return `${diaSemana} ${diaMes}`
-    })
-
-    visibleSegments.splice(0, visibleSegments.length, ...diasConDiaSemana.value.map(() => true))
-
-    chartUsuarios = renderChart(
+    chartUsuarios = renderUsuariosChart(
       'chartUsuarios',
-      diasConDiaSemana.value,
-      cuentas,
-      chartUsuarios,
-      'Usuarios últimos 7 días',
-      'doughnut'
+      diasLabels,
+      Object.values(usuariosPorDia),
+      chartUsuarios
     )
   } catch (error) {
     console.error('Error cargando datos:', error)
@@ -223,7 +275,7 @@ function handleLogout() {
 function formatFecha(fechaStr: string | null | undefined) {
   if (!fechaStr) return null
   const date = new Date(fechaStr)
-  return date.toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' })
+  return date.toLocaleDateString('es-VE', { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
 function exportarJSON() {
@@ -259,12 +311,12 @@ onMounted(() => {
 }
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
   gap: 1rem;
 }
 .charts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
   gap: 2rem;
   margin-bottom: 3rem;
 }
@@ -292,10 +344,10 @@ canvas {
 }
 .recent-card {
   border: 1px solid #ddd;
-  padding: 1rem;
   border-radius: 6px;
   background: #fafafa;
-  overflow-x: auto;
+  max-height: 400px; /* Altura máxima para la tabla */
+  overflow: auto;     /* Scroll vertical y horizontal si es necesario */
 }
 .recent-table {
   width: 100%;
@@ -311,6 +363,8 @@ canvas {
   color: #333;
   position: sticky;
   top: 0;
+  z-index: 1; /* Asegura que la cabecera esté por encima */
+  box-shadow: inset 0 -2px 0 #ddd; /* Separador visual */
 }
 .text-center {
   text-align: center;
