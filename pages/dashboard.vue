@@ -28,20 +28,37 @@
       <!-- Resumen estadístico -->
       <div class="stats-grid">
         <div class="stat-item">
-          <StatsCard 
-            :value="totalSimuladores" 
-            label="Simuladores" 
-            icon="bi-cpu" 
-            color="primary" 
-          />
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="bi bi-cpu"></i>
+            </div>
+            <div class="stat-info">
+              <h3>{{ totalSimuladores }}</h3>
+              <p>Simuladores</p>
+            </div>
+          </div>
         </div>
         <div class="stat-item">
-          <StatsCard 
-            :value="totalAsignaturas" 
-            label="Asignaturas" 
-            icon="bi-book" 
-            color="success" 
-          />
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="bi bi-book"></i>
+            </div>
+            <div class="stat-info">
+              <h3>{{ totalAsignaturas }}</h3>
+              <p>Asignaturas</p>
+            </div>
+          </div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="bi bi-tags"></i>
+            </div>
+            <div class="stat-info">
+              <h3>{{ totalCategorias }}</h3>
+              <p>Categorías</p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -71,33 +88,161 @@
             <i class="bi bi-cpu me-2"></i>Listado de Simuladores
           </h5>
         </div>
-        <div class="card-body">
-          <SimuladoresTable 
-            :simuladores="simuladores" 
-            @refresh="cargarSimuladores"
-            @edit="abrirEditarSimulador"
-            @delete="abrirEliminarSimulador"
-          />
+        <div class="card-body tablex">
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Asignatura</th>
+                  <th>Categoría</th>
+                  <th>Fecha</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="simulador in simuladores" :key="simulador.id">
+                  <td>
+                    <div class="fw-bold">{{ simulador.nombre_del_simulador }}</div>
+                    <div class="text-muted small">{{ truncateText(simulador.descripcion_del_simulador, 50) }}</div>
+                  </td>
+                  <td>{{ simulador.asignatura }}</td>
+                  <td>
+                    <span class="badge bg-info">{{ simulador.categoria }}</span>
+                  </td>
+                  <td>{{ formatFecha(simulador.created_at) }}</td>
+                  <td>
+                    <div class="d-flex gap-2">
+                      <button class="btn btn-sm btn-outline-primary" @click="abrirEditarSimulador(simulador)">
+                        <i class="bi bi-pencil"></i>
+                      </button>
+                      <button class="btn btn-sm btn-outline-danger" @click="abrirEliminarSimulador(simulador)">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                      <a v-if="simulador.enlace" 
+                        :href="simulador.enlace" 
+                        target="_blank" 
+                        class="btn btn-sm btn-outline-success">
+                        <i class="bi bi-box-arrow-up-right"></i>
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+                <tr v-if="simuladores.length === 0">
+                  <td colspan="5" class="text-center text-muted py-4">
+                    No hay simuladores registrados
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      <!-- Modales -->
-      <SimuladorFormModal 
-        :visible="modalSimuladorVisible" 
-        :editMode="modoEdicion" 
-        :simulador="simuladorSeleccionado"
-        :categorias="categoriasDisponibles"
-        :asignaturas="asignaturasOpciones"
-        @close="cerrarModales"
-        @submit="guardarSimulador"
-      />
+      <!-- Modal de formulario -->
+      <div class="modal-overlay" v-if="modalSimuladorVisible" @click.self="cerrarModales">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">
+              <i class="bi" :class="modoEdicion ? 'bi-pencil' : 'bi-plus-circle'"></i>
+              {{ modoEdicion ? 'Editar Simulador' : 'Nuevo Simulador' }}
+            </h5>
+            <button type="button" class="btn-close" @click="cerrarModales"></button>
+          </div>
+          <div class="modal-body">
+            <form @submit.prevent="guardarSimulador">
+              <div class="mb-3">
+                <label for="nombre" class="form-label">Nombre del Simulador</label>
+                <input 
+                  type="text" 
+                  class="form-control" 
+                  id="nombre" 
+                  v-model="formData.nombre" 
+                  required
+                >
+              </div>
+              
+              <div class="mb-3">
+                <label for="descripcion" class="form-label">Descripción</label>
+                <textarea 
+                  class="form-control" 
+                  id="descripcion" 
+                  rows="3" 
+                  v-model="formData.descripcion"
+                ></textarea>
+              </div>
+              
+              <div class="mb-3">
+                <label for="asignatura" class="form-label">Asignatura</label>
+                <select 
+                  class="form-select" 
+                  id="asignatura" 
+                  v-model="formData.asignatura" 
+                  required
+                >
+                  <option value="" disabled>Seleccione una asignatura</option>
+                  <option v-for="asignatura in asignaturasOpciones" :key="asignatura" :value="asignatura">
+                    {{ asignatura }}
+                  </option>
+                </select>
+              </div>
+              
+              <div class="mb-3">
+                <label for="categoria" class="form-label">Categoría</label>
+                <input 
+                  type="text" 
+                  class="form-control" 
+                  id="categoria" 
+                  v-model="formData.categoria" 
+                  placeholder="Ej: Circuitos, Matemáticas, etc."
+                >
+              </div>
+              
+              <div class="mb-3">
+                <label for="enlace" class="form-label">Enlace</label>
+                <input 
+                  type="url" 
+                  class="form-control" 
+                  id="enlace" 
+                  v-model="formData.enlace" 
+                  placeholder="https://ejemplo.com/simulador"
+                  required
+                >
+              </div>
+              
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @click="cerrarModales">Cancelar</button>
+                <button type="submit" class="btn btn-unefa-primary">
+                  {{ modoEdicion ? 'Actualizar' : 'Guardar' }}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
 
-      <DeleteConfirmationModal 
-        :visible="modalEliminarVisible"
-        :simuladorNombre="simuladorSeleccionado?.nombre_del_simulador || ''"
-        @close="cerrarModales"
-        @confirm="confirmarEliminar"
-      />
+      <!-- Modal de confirmación de eliminación -->
+      <div class="modal-overlay" v-if="modalEliminarVisible" @click.self="cerrarModales">
+        <div class="modal-content" style="max-width: 500px;">
+          <div class="modal-header">
+            <h5 class="modal-title text-danger">
+              <i class="bi bi-exclamation-triangle me-2"></i>
+              Confirmar Eliminación
+            </h5>
+            <button type="button" class="btn-close" @click="cerrarModales"></button>
+          </div>
+          <div class="modal-body">
+            <p>¿Estás seguro que deseas eliminar el simulador <strong>{{ simuladorSeleccionado?.nombre_del_simulador || '' }}</strong>?</p>
+            <p class="text-muted small">Esta acción no se puede deshacer.</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" @click="cerrarModales">Cancelar</button>
+            <button type="button" class="btn btn-danger" @click="confirmarEliminar">
+              <i class="bi bi-trash me-2"></i>Eliminar
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -107,29 +252,17 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-// Componentes
-import AdminSidebar from '@/components/admin/AdminSidebar.vue'
-import StatsCard from '@/components/admin/StatsCard.vue'
-import SimuladoresTable from '@/components/admin/SimuladoresTable.vue'
-import SimuladorFormModal from '@/components/admin/SimuladorFormModal.vue'
-import DeleteConfirmationModal from '@/components/admin/DeleteConfirmationModal.vue'
+// Configuración inicial
 const { isAuthenticated, logout } = useAuth()
 const router = useRouter()
 const { $supabase } = useNuxtApp()
 const supabase = $supabase as SupabaseClient
 
-// Datos
+// Datos y estado
 const simuladores = ref<any[]>([])
 const totalSimuladores = ref(0)
 const totalAsignaturas = ref(0)
 const totalCategorias = ref(0)
-const totalUsuarios = ref(0)
-
-// Estados modales
-const modalSimuladorVisible = ref(false)
-const modalEliminarVisible = ref(false)
-const simuladorSeleccionado = ref<any>(null)
-const modoEdicion = ref(false)
 
 // Sistema de alertas mejorado
 interface Alert {
@@ -181,9 +314,9 @@ function removeAlertById(id: number) {
   }
 }
 
-// Opciones de asignaturas
+// Opciones para formulario
 const asignaturasOpciones = [
-  "Matemáticas", "Quimica", "Física I", "Cálculo Numérico", "Probabilidad y Estadística", 
+  "Matemáticas", "Química", "Física I", "Cálculo Numérico", "Probabilidad y Estadística", 
   "Lógica Matemática", "Circuitos Lógicos", "Investigación de Operaciones", 
   "Arquitectura del Computador", "Optimización No Lineal", "Procesos Estocásticos", 
   "Geometría Analítica", "Física II", "Programación", "Lenguajes de Programación I",
@@ -191,14 +324,45 @@ const asignaturasOpciones = [
   "Bases de Datos", "Redes", "Sistemas Operativos", "Simulación y Modelos"
 ]
 
-// Computed para categorías disponibles
-const categoriasDisponibles = computed(() => {
-  const categorias = new Set<string>()
-  simuladores.value.forEach(sim => categorias.add(sim.categoria))
-  return Array.from(categorias).sort()
+// Estado de modales
+const modalSimuladorVisible = ref(false)
+const modalEliminarVisible = ref(false)
+const simuladorSeleccionado = ref<any>(null)
+const modoEdicion = ref(false)
+
+// Datos del formulario
+const formData = ref({
+  nombre: '',
+  descripcion: '',
+  asignatura: '',
+  categoria: '',
+  enlace: ''
 })
 
-// Carga los datos iniciales
+// Funciones de utilidad
+function truncateText(text: string, length: number) {
+  if (!text) return ''
+  return text.length > length ? text.substring(0, length) + '...' : text
+}
+
+function formatFecha(fecha: string | Date): string {
+  if (!fecha) return ''
+  return new Date(fecha).toLocaleDateString('es-ES', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  })
+}
+
+function escapeCsvField(field: any): string {
+  const stringField = String(field === null || field === undefined ? '' : field)
+  if (stringField.search(/("|,|\n)/g) >= 0) {
+    return `"${stringField.replace(/"/g, '""')}"`
+  }
+  return stringField
+}
+
+// Funciones de carga de datos
 async function cargarSimuladores() {
   try {
     const { data, error } = await supabase
@@ -212,22 +376,15 @@ async function cargarSimuladores() {
     totalSimuladores.value = data?.length || 0
     
     // Calcular estadísticas
-    const asignaturas = new Set(data?.map(sim => sim.asignatura))
-    const categorias = new Set(data?.map(sim => sim.categoria))
+    const asignaturas = new Set(data?.map(item => item.asignatura))
+    const categorias = new Set(data?.map(item => item.categoria).filter(Boolean))
     
     totalAsignaturas.value = asignaturas.size
     totalCategorias.value = categorias.size
     
-    // Obtener total de usuarios
-    const { count } = await supabase
-      .from('usuarios')
-      .select('*', { count: 'exact', head: true })
-    
-    totalUsuarios.value = count || 0
-    
   } catch (error) {
     console.error('Error al cargar simuladores:', error)
-    addAlert('error', 'Error al cargar los simuladores. Por favor, intente nuevamente.')
+    addAlert('error', 'Error al cargar los datos de simuladores. Por favor, intente nuevamente.')
   }
 }
 
@@ -235,12 +392,20 @@ async function cargarSimuladores() {
 function abrirNuevoSimulador() {
   modoEdicion.value = false
   simuladorSeleccionado.value = null
+  resetForm()
   modalSimuladorVisible.value = true
 }
 
 function abrirEditarSimulador(simulador: any) {
   modoEdicion.value = true
   simuladorSeleccionado.value = simulador
+  formData.value = {
+    nombre: simulador.nombre_del_simulador || '',
+    descripcion: simulador.descripcion_del_simulador || '',
+    asignatura: simulador.asignatura || '',
+    categoria: simulador.categoria || '',
+    enlace: simulador.enlace || ''
+  }
   modalSimuladorVisible.value = true
 }
 
@@ -255,19 +420,29 @@ function cerrarModales() {
   simuladorSeleccionado.value = null
 }
 
+function resetForm() {
+  formData.value = {
+    nombre: '',
+    descripcion: '',
+    asignatura: '',
+    categoria: '',
+    enlace: ''
+  }
+}
+
 // Operaciones CRUD
-async function guardarSimulador(formData: any) {
+async function guardarSimulador() {
   try {
     if (modoEdicion.value && simuladorSeleccionado.value) {
-      // Actualización (no cambiamos la fecha)
+      // Actualización
       const { error } = await supabase
         .from('simuladores')
         .update({
-          nombre_del_simulador: formData.nombre,
-          enlace: formData.enlace,
-          categoria: formData.categoria,
-          asignatura: formData.asignatura,
-          descripcion_del_simulador: formData.descripcion,
+          nombre_del_simulador: formData.value.nombre,
+          descripcion_del_simulador: formData.value.descripcion,
+          asignatura: formData.value.asignatura,
+          categoria: formData.value.categoria,
+          enlace: formData.value.enlace
         })
         .eq('id', simuladorSeleccionado.value.id)
 
@@ -275,17 +450,16 @@ async function guardarSimulador(formData: any) {
       
       addAlert('success', 'Simulador actualizado correctamente')
     } else {
-      // Creación (agregamos fecha actual)
-      const fechaActual = new Date().toISOString()
+      // Creación
       const { data, error } = await supabase
         .from('simuladores')
         .insert([{
-          nombre_del_simulador: formData.nombre,
-          enlace: formData.enlace,
-          categoria: formData.categoria,
-          asignatura: formData.asignatura,
-          descripcion_del_simulador: formData.descripcion,
-          created_at: fechaActual
+          nombre_del_simulador: formData.value.nombre,
+          descripcion_del_simulador: formData.value.descripcion,
+          asignatura: formData.value.asignatura,
+          categoria: formData.value.categoria,
+          enlace: formData.value.enlace,
+          created_at: new Date().toISOString()
         }])
         .select()
 
@@ -325,24 +499,6 @@ async function confirmarEliminar() {
   }
 }
 
-function formatFecha(fecha: string | Date): string {
-  if (!fecha) return ''
-  return new Date(fecha).toLocaleDateString('es-ES', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  })
-}
-
-function escapeCsvField(field: any): string {
-  const stringField = String(field === null || field === undefined ? '' : field)
-
-  if (stringField.search(/("|,|\n)/g) >= 0) {
-    return `"${stringField.replace(/"/g, '""')}"`
-  }
-  return stringField
-}
-
 async function exportarDatos() {
   try {
     if (simuladores.value.length === 0) {
@@ -350,9 +506,15 @@ async function exportarDatos() {
       return
     }
 
-    const headers = ['ID', 'Nombre', 'Asignatura', 'Categoría', 'Enlace', 'Descripción', 'Fecha de Creación']
-    const rows = simuladores.value.map(sim => [
-      sim.id, sim.nombre_del_simulador, sim.asignatura, sim.categoria, sim.enlace, sim.descripcion_del_simulador, formatFecha(sim.created_at)
+    const headers = ['ID', 'Nombre', 'Descripción', 'Asignatura', 'Categoría', 'Enlace', 'Fecha de Creación']
+    const rows = simuladores.value.map(item => [
+      item.id, 
+      item.nombre_del_simulador, 
+      item.descripcion_del_simulador, 
+      item.asignatura, 
+      item.categoria, 
+      item.enlace,
+      formatFecha(item.created_at)
     ])
 
     let csvContent = "data:text/csv;charset=utf-8," + headers.map(escapeCsvField).join(',') + '\r\n'
@@ -372,20 +534,18 @@ async function exportarDatos() {
     console.error('Error al exportar datos:', error)
     addAlert('error', 'Error al exportar los datos. Por favor, intente nuevamente.')
   }
-} 
+}
 
-onMounted(() => {
-  if (!isAuthenticated()) {
-    navigateTo('/')
-  }
-})
-
+// Autenticación
 const handleLogout = () => {
   logout()
 }
 
 // Carga inicial
 onMounted(() => {
+  if (!isAuthenticated()) {
+    navigateTo('/')
+  }
   cargarSimuladores()
 })
 </script>
@@ -534,7 +694,7 @@ onMounted(() => {
   align-items: center;
 }
 
-/* Estilos para el grid de estadísticas */
+/* Estadísticas */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -546,7 +706,66 @@ onMounted(() => {
   min-width: 0;
 }
 
-/* Estilos para acciones rápidas */
+.stat-card {
+  background-color: #002147;
+  color: #FFC72C;
+  border-radius: 10px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.stat-icon {
+  font-size: 2rem;
+  margin-right: 1rem;
+}
+
+.stat-info h3 {
+  font-size: 1.75rem;
+  margin: 0;
+  font-weight: 700;
+}
+
+.stat-info p {
+  margin: 0;
+  opacity: 0.9;
+  font-size: 0.9rem;
+}
+
+/* Tabla */
+.table-responsive {
+  overflow-x: auto;
+}
+.tablex{
+  height: 500px !important; 
+  max-height: 500px !important;
+  overflow-y: scroll !important;
+}
+.table {
+  font-size: 0.9rem;
+  width: 100%;
+}
+
+.table th {
+  font-weight: 600;
+  color: #495057;
+  background-color: #f8f9fa;
+  padding: 0.75rem 1rem;
+}
+
+.table td {
+  padding: 0.75rem 1rem;
+  vertical-align: middle;
+}
+
+.badge {
+  font-size: 0.75em;
+  font-weight: 500;
+  padding: 0.35em 0.65em;
+}
+
+/* Acciones rápidas */
 .quick-actions {
   display: flex;
   flex-wrap: wrap;
@@ -563,7 +782,71 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-/* Media queries para responsive design */
+/* Modales */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #dee2e6;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #dee2e6;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.btn-close {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
+.btn-close:hover {
+  opacity: 1;
+}
+
+/* Responsive */
 @media (max-width: 1199.98px) {
   .admin-content {
     padding: 1.25rem;
@@ -673,6 +956,18 @@ onMounted(() => {
   
   .card-header h5 i {
     margin-right: 0.5rem;
+  }
+  
+  .stat-card {
+    padding: 1rem;
+  }
+  
+  .stat-icon {
+    font-size: 1.5rem;
+  }
+  
+  .stat-info h3 {
+    font-size: 1.5rem;
   }
   
   .alert-container {

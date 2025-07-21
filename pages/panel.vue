@@ -94,9 +94,9 @@ function renderUsuariosChart(canvasId: string, labels: string[], data: number[],
   if (existingChart) existingChart.destroy()
 
   // Crear un gradiente para el fondo del área del gráfico
-  const gradient = ctx.createLinearGradient(0, 0, 0, 300)
-  gradient.addColorStop(0, 'rgba(13, 110, 253, 0.5)')
-  gradient.addColorStop(1, 'rgba(13, 110, 253, 0)')
+  const gradient = ctx.createLinearGradient(0, 0, 0, 350)
+  gradient.addColorStop(0, 'rgb(0, 33, 71)')
+  gradient.addColorStop(1, 'rgba(255, 199, 45, 0)')
 
   const config = {
     type: 'line',
@@ -106,13 +106,13 @@ function renderUsuariosChart(canvasId: string, labels: string[], data: number[],
           label: 'Nuevos Usuarios',
           data,
           backgroundColor: gradient,
-          borderColor: 'rgba(13, 110, 253, 1)',
-          pointBackgroundColor: 'rgba(13, 110, 253, 1)',
-          pointBorderColor: '#fff',
+          borderColor: 'rgba(0, 33, 71, 1)',
+          pointBackgroundColor: 'rgba(255, 199, 45, 1)',
+          pointBorderColor: '#017A3D',
           pointHoverBackgroundColor: '#fff',
-          pointHoverBorderColor: 'rgba(13, 110, 253, 1)',
+          pointHoverBorderColor: '#017A3D',
           fill: true,
-          tension: 0.4
+          tension: 0.1
       }]
     },
     options: {
@@ -166,7 +166,7 @@ function renderAsignaturasChart(canvasId: string, labels: string[], data: number
           backgroundColor: colors,
           borderColor: colors.map(c => c.replace(/0\.7\)$/, '1)')),
           borderWidth: 1,
-          borderRadius: 4
+          borderRadius: 1
       }]
     },
     options: {
@@ -363,7 +363,7 @@ canvas {
   color: #333;
   position: sticky;
   top: 0;
-  z-index: 1; /* Asegura que la cabecera esté por encima */
+  z-index: 1; 
   box-shadow: inset 0 -2px 0 #ddd; /* Separador visual */
 }
 .text-center {

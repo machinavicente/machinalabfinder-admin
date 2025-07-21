@@ -5,6 +5,26 @@
     <div class="admin-content">
       <h2 class="mb-4 text-unefa-primary">Panel de Biblioteca</h2>
       
+      <!-- Sistema de alertas mejorado -->
+      <div class="alert-container">
+        <transition-group name="alert">
+          <div 
+            v-for="(alert, index) in activeAlerts" 
+            :key="alert.id"
+            class="alert"
+            :class="`alert-${alert.type}`"
+          >
+            <div class="alert-content">
+              <i :class="alert.icon"></i>
+              <span>{{ alert.message }}</span>
+              <button class="alert-close" @click="removeAlert(index)">
+                <i class="bi bi-x"></i>
+              </button>
+            </div>
+          </div>
+        </transition-group>
+      </div>
+
       <!-- Resumen estadístico -->
       <div class="stats-grid">
         <div class="stat-item">
@@ -122,6 +142,7 @@
           </div>
         </div>
       </div>
+
       <!-- Modal para subir imágenes -->
       <div v-if="showUploadModal" class="custom-modal">
         <div class="custom-modal-backdrop" @click="showUploadModal = false"></div>
@@ -289,34 +310,6 @@
           </div>
         </div>
       </div>
-
-      <!-- Modal de operación exitosa -->
-      <div v-if="showSuccessModal" class="custom-modal">
-        <div class="custom-modal-backdrop" @click="showSuccessModal = false"></div>
-        <div class="custom-modal-content">
-          <div class="custom-modal-header bg-success text-white">
-            <h5 class="custom-modal-title">
-              <i class="bi bi-check-circle me-2"></i>Operación Exitosa
-            </h5>
-            <button type="button" class="custom-modal-close" @click="showSuccessModal = false">
-              &times;
-            </button>
-          </div>
-          <div class="custom-modal-body text-center">
-            <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
-            <p class="mt-3">{{ successMessage }}</p>
-          </div>
-          <div class="custom-modal-footer">
-            <button 
-              type="button" 
-              class="btn btn-success"
-              @click="showSuccessModal = false"
-            >
-              Aceptar
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -355,8 +348,56 @@ const renaming = ref(false)
 const showUploadModal = ref(false)
 const showDeleteModal = ref(false)
 const showRenameModal = ref(false)
-const showSuccessModal = ref(false)
-const successMessage = ref('')
+
+// Sistema de alertas mejorado
+interface Alert {
+  id: number;
+  type: 'success' | 'error' | 'warning' | 'info';
+  message: string;
+  icon: string;
+  timeout?: number;
+}
+
+const alerts = ref<Alert[]>([])
+let alertIdCounter = 0
+
+const activeAlerts = computed(() => alerts.value)
+
+function addAlert(type: Alert['type'], message: string, timeout = 5000) {
+  const icons = {
+    success: 'bi bi-check-circle-fill',
+    error: 'bi bi-exclamation-circle-fill',
+    warning: 'bi bi-exclamation-triangle-fill',
+    info: 'bi bi-info-circle-fill'
+  }
+  
+  const newAlert: Alert = {
+    id: alertIdCounter++,
+    type,
+    message,
+    icon: icons[type],
+    timeout
+  }
+  
+  alerts.value.push(newAlert)
+  
+  if (timeout > 0) {
+    setTimeout(() => {
+      removeAlertById(newAlert.id)
+    }, timeout)
+  }
+}
+
+function removeAlert(index: number) {
+  alerts.value.splice(index, 1)
+}
+
+function removeAlertById(id: number) {
+  const index = alerts.value.findIndex(alert => alert.id === id)
+  if (index !== -1) {
+    alerts.value.splice(index, 1)
+  }
+}
 
 // Computed properties
 const imagenesFiltradas = computed(() => {
@@ -427,7 +468,7 @@ async function cargarImagenes() {
     
   } catch (error) {
     console.error('Error al cargar imágenes:', error)
-    alert('Error al cargar las imágenes de la biblioteca')
+    addAlert('error', 'Error al cargar las imágenes de la biblioteca')
   } finally {
     loading.value = false
   }
@@ -510,13 +551,12 @@ async function subirImagenes() {
     // Éxito
     filesToUpload.value = [];
     showUploadModal.value = false;
-    successMessage.value = 'Imágenes subidas correctamente';
-    showSuccessModal.value = true;
+    addAlert('success', 'Imágenes subidas correctamente');
     await cargarImagenes();
 
   } catch (error) {
-    console.error('Error detallado:', error);
-    alert(`Error al subir: ${error.message}\n\nCódigo: ${error.statusCode || 'N/A'}`);
+    console.error('Error al subir imágenes:', error);
+    addAlert('error', 'Error al subir las imágenes. Verifique los archivos e intente nuevamente.');
   } finally {
     uploading.value = false;
   }
@@ -558,12 +598,11 @@ async function renombrarImagen() {
     // Actualizar la lista
     await cargarImagenes();
     showRenameModal.value = false;
-    successMessage.value = 'Imagen renombrada correctamente';
-    showSuccessModal.value = true;
+    addAlert('success', 'Imagen renombrada correctamente');
 
   } catch (error) {
     console.error('Error al renombrar:', error);
-    alert(`Error al renombrar: ${error.message}`);
+    addAlert('error', 'Error al renombrar la imagen. Por favor, intente nuevamente.');
   } finally {
     renaming.value = false;
   }
@@ -590,12 +629,11 @@ async function eliminarImagen() {
     // Recargar imágenes y mostrar confirmación
     await cargarImagenes();
     showDeleteModal.value = false;
-    successMessage.value = 'Imagen eliminada correctamente';
-    showSuccessModal.value = true;
+    addAlert('success', 'Imagen eliminada correctamente');
     
   } catch (error) {
     console.error('Error al eliminar imagen:', error);
-    alert('Error al eliminar la imagen');
+    addAlert('error', 'Error al eliminar la imagen. Por favor, intente nuevamente.');
   } finally {
     deleting.value = false;
   }
@@ -647,6 +685,97 @@ onMounted(() => {
   padding: 1.5rem;
   transition: margin-left 0.3s ease;
   overflow-x: hidden;
+}
+
+/* Estilos para el sistema de alertas */
+.alert-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1100;
+  max-width: 400px;
+  width: 100%;
+}
+
+.alert {
+  position: relative;
+  padding: 1rem 1.5rem;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.alert-success {
+  background-color: #d4edda;
+  color: #155724;
+  border-left: 4px solid #28a745;
+}
+
+.alert-error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border-left: 4px solid #dc3545;
+}
+
+.alert-warning {
+  background-color: #fff3cd;
+  color: #856404;
+  border-left: 4px solid #ffc107;
+}
+
+.alert-info {
+  background-color: #d1ecf1;
+  color: #0c5460;
+  border-left: 4px solid #17a2b8;
+}
+
+.alert-content {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.alert i {
+  margin-right: 12px;
+  font-size: 1.25rem;
+}
+
+.alert-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  font-size: 1.2rem;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.alert-close:hover {
+  opacity: 1;
+}
+
+/* Transiciones para alertas */
+.alert-enter-from,
+.alert-leave-to {
+  opacity: 0;
+  transform: translateX(100px);
+}
+
+.alert-enter-active,
+.alert-leave-active {
+  transition: all 0.3s ease;
+}
+
+.alert-move {
+  transition: transform 0.3s ease;
 }
 
 .bg-unefa-primary {
@@ -904,11 +1033,6 @@ onMounted(() => {
   max-width: 90%;
 }
 
-/* Estilo para el modal de éxito */
-.custom-modal-header.bg-success {
-  background-color: #28a745;
-}
-
 /* Media queries para responsive design */
 @media (max-width: 1199.98px) {
   .admin-content {
@@ -921,6 +1045,10 @@ onMounted(() => {
   
   .gallery-grid {
     gap: 1.25rem;
+  }
+  
+  .alert-container {
+    max-width: 350px;
   }
 }
 
@@ -940,6 +1068,10 @@ onMounted(() => {
   
   .gallery-grid {
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+  
+  .alert-container {
+    max-width: 300px;
   }
 }
 
@@ -964,6 +1096,16 @@ onMounted(() => {
   .gallery-grid {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 1rem;
+  }
+  
+  .alert-container {
+    max-width: 280px;
+    top: 10px;
+    right: 10px;
+  }
+  
+  .alert {
+    padding: 0.8rem 1.2rem;
   }
 }
 
@@ -992,6 +1134,19 @@ onMounted(() => {
   .upload-preview-container {
     grid-template-columns: 1fr;
   }
+  
+  .alert-container {
+    max-width: 250px;
+  }
+  
+  .alert {
+    padding: 0.7rem 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .alert i {
+    font-size: 1.1rem;
+  }
 }
 
 @media (max-width: 400px) {
@@ -1009,6 +1164,10 @@ onMounted(() => {
   
   .gallery-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .alert-container {
+    max-width: 220px;
   }
 }
 </style>

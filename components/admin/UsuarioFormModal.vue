@@ -149,8 +149,6 @@ function submitForm() {
   if (!props.editMode) {
     showSuccessModal.value = true
     resetForm() // Limpiar el formulario después de enviar
-  } else {
-    emit('close')
   }
 }
 
